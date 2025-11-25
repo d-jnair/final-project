@@ -2,14 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Africa Fire Hotspots Map</title>
+  <title>Global Fire Hotspots Map</title>
   <link rel="stylesheet" href="style.css"> 
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://unpkg.com/topojson-client@3"></script>
-  
-  </head>
+</head>
 <body>
   
+  <select id="continent-selector" onchange="filterMap(this.value)">
+    <option value="Africa">Africa</option>
+    <option value="North America">North America</option>
+    <option value="South America">South America</option>
+    <option value="Asia">Asia</option>
+    <option value="Oceania">Oceania</option>
+    <option value="Europe">Europe</option>
+  </select>
+
   <svg id="map"></svg>
   <canvas id="dots"></canvas> 
   

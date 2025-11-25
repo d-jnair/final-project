@@ -32,3 +32,21 @@ h1 {
 canvas {
   pointer-events:none; /* map interaction */
 }
+
+/* style.css (Add or modify this block) */
+#continent-selector {
+  /* Positioning is necessary for z-index to work */
+  position: absolute; 
+  top: 10px;
+  right: 10px;
+  
+  /* CRITICAL FIX: Ensure it is on top of the map/canvas (z-index: 10) */
+  z-index: 10; 
+  
+  /* Styling for appearance */
+  padding: 8px 12px;
+  font-size: 16px;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
