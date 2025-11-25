@@ -1,0 +1,85 @@
+/* body {
+  font-family: sans-serif;
+  text-align: center;
+  background-color: #f9f9f9;
+  margin: 0;
+}
+
+h1 {
+  margin-top: 20px;
+}
+
+#map {
+  margin: 0 auto;
+  width: 90vw;
+  height: 80vh;
+}
+
+.country {
+  fill: #eee;
+  stroke: #aaa;
+}
+
+.hotspot {
+  stroke: #333;
+  stroke-width: 0.5px;
+  opacity: 0.7;
+}
+
+canvas {
+  background: rgba(255,0,0,0.2);
+}
+
+canvas {
+  position:absolute;
+  top:0;
+  left:0;
+  width:100vw;
+  height:100vh;
+  pointer-events:none;
+} */
+body {
+  font-family: sans-serif;
+  text-align: center;
+  background-color: #f9f9f9;
+  margin: 0;
+}
+
+h1 {
+  margin-top: 20px;
+}
+
+/* --- CRITICAL FIXES FOR STACKING --- */
+/* The SVG and Canvas must both be positioned absolutely 
+   and cover the same area for the dots to align with the map. */
+
+#map, canvas {
+  position: absolute; 
+  top: 0;
+  left: 0;
+  width: 100vw; /* Use 100vw/100vh to ensure it covers the window as per your JS */
+  height: 100vh;
+  margin: 0; /* Remove margin to ensure full coverage */
+}
+
+#map {
+  /* No special fill/stroke rules needed here, D3 handles that */
+}
+/* ------------------------------------- */
+
+.country {
+  fill: #eee;
+  stroke: #aaa;
+}
+
+.hotspot {
+  stroke: #333;
+  stroke-width: 0.5px;
+  opacity: 0.7;
+}
+
+canvas {
+  /* This is fine for checking, but remove the background once working */
+  /* background: rgba(255,0,0,0.2); */ 
+  pointer-events:none; /* Allows map interaction if needed */
+}
