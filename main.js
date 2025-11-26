@@ -296,7 +296,7 @@ playBtn.addEventListener("click", () => {
             activeMonth += 1;
             if (activeMonth > 12) activeMonth = 1; // Loop back to January
             monthSlider.value = activeMonth;
-            document.getElementById("month-label").innerText = "Month: " + monthNames[activeMonth - 1];
+            document.getElementById("month-label").innerText = "Month: " + monthNames[activeMonth - 1] + " 2024";
             drawMap();
         }, 1000); // change 1000 to smaller value for faster animation
     }
@@ -315,7 +315,7 @@ resetBtn.addEventListener("click", () => {
     // Reset month to January
     activeMonth = 1;
     monthSlider.value = 1;
-    document.getElementById("month-label").innerText = "Month: January";
+    document.getElementById("month-label").innerText = "Month: January 2024";
 
     drawMap(); // redraw map with January data
 });
@@ -329,99 +329,76 @@ window.filterMap = function(continentName) {
     activeMonth = 1;
     const monthSlider = document.getElementById("month-slider");
     monthSlider.value = 1;
-    document.getElementById("month-label").innerText = "Month: January";
+    document.getElementById("month-label").innerText = "Month: January 2024";
 
     drawMap(); // Redraw the map with the new filter
 };
+
+function drawFireDots(data) {
+    const projection = window.currentProjection;
+    if (!projection) return;
+
+    // Fade effect: draw points with opacity animation
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // clear canvas only
+
+    ctx.fillStyle = "rgba(255, 69, 0, 0.6)"; // red-orange, slightly transparent
+    data.forEach(d => {
+        const [x, y] = projection([+d.longitude, +d.latitude]);
+        if (!isNaN(x) && !isNaN(y)) {
+            ctx.beginPath();
+            ctx.arc(x, y, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+}
 
 // --- 4. Function to Draw/Redraw Everything ---
 function drawMap() {
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    // ... (Canvas Setup, Clearing Context, and Filtering Data are unchanged) ...
+    // Canvas setup
     canvas.width = width * window.devicePixelRatio;
     canvas.height = height * window.devicePixelRatio;
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
     ctx.clearRect(0, 0, width, height);
-    svg.selectAll("*").remove();
 
     const filteredData = (allData[activeContinent] || []).filter(d => {
-    // Assuming your CSV has a column 'acq_date' in format YYYY-MM-DD
-    const month = new Date(d.acq_date).getMonth() + 1; // JS months are 0-based
-    return month === activeMonth;
-});
-    
-    // 4.1 Projection Setup
+        const month = new Date(d.acq_date).getMonth() + 1;
+        return month === activeMonth;
+    });
+
+    // Projection setup (reuse projection across redraws)
     d3.json("https://unpkg.com/world-atlas@2/countries-50m.json").then(world => {
         const countries = topojson.feature(world, world.objects.countries).features;
-        
-        // --- 1. Filter the GeoJSON Features ---
         const countriesToDraw = CONTINENT_MAP[activeContinent];
-        const mapFeatures = countries.filter(d => 
-            // Filter by the country name property in the GeoJSON
+        const mapFeatures = countries.filter(d =>
             countriesToDraw.includes(d.properties.name)
         );
 
-        if (mapFeatures.length === 0) {
-            console.error(`Could not find map features for countries in ${activeContinent}. Check names in CONTINENT_DATA.`);
-            return;
+        if (!svg.selectAll("path").nodes().length) {
+            // Only draw the continent outlines once
+            const collection = { type: "FeatureCollection", features: mapFeatures };
+            const projection = d3.geoMercator().fitSize([width, height], collection);
+            const path = d3.geoPath().projection(projection);
+
+            svg.append("g")
+                .attr("id", "continent-layer")
+                .selectAll("path")
+                .data(mapFeatures)
+                .enter()
+                .append("path")
+                .attr("d", path)
+                .attr("fill", "#ddd")
+                .attr("stroke", "#333")
+                .attr("stroke-width", 0.6);
+
+            // Save projection for later
+            window.currentProjection = projection;
         }
-
-        // --- 2. Calculate Bounds and Scale ---
         
-        // Combine the filtered features into one GeoJSON collection to calculate the bounds
-        const collection = { type: "FeatureCollection", features: mapFeatures };
-        
-        // d3.geoBounds calculates the [minLon, minLat], [maxLon, maxLat] of the collection
-        const [[minLon, minLat], [maxLon, maxLat]] = d3.geoBounds(collection);
-        
-        // Calculate the center and size of the bounding box
-        const centerLon = (minLon + maxLon) / 2;
-        const centerLat = (minLat + maxLat) / 2;
-        const lonDiff = maxLon - minLon;
-        const latDiff = maxLat - minLat;
-
-        // Use D3's fitSize method for more accurate scaling
-        // This method automatically calculates the necessary scale and translation 
-        // to fit the features into the desired screen size (width, height)
-        const projection = d3.geoMercator()
-            .fitSize([width, height], collection); 
-
-        // If fitSize is not accurate enough or you need manual adjustment, use this calculation:
-        /*
-        const paddingRatio = 1.1; // 10% padding
-        const scale = Math.min(width / (lonDiff * paddingRatio), height / (latDiff * paddingRatio)) * 170;
-        
-        const projection = d3.geoMercator()
-            .center([centerLon, centerLat])
-            .scale(scale)
-            .translate([width / 2, height / 2]);
-        */
-
-        const path = d3.geoPath().projection(projection);
-
-        // --- 3. Draw Map Features (SVG Map) ---
-        svg.append("g")
-            .selectAll("path")
-            .data(mapFeatures) 
-            .enter()
-            .append("path")
-            .attr("d", path)
-            .attr("fill", "#ddd")
-            .attr("stroke", "#333")
-            .attr("stroke-width", 0.6);
-
-        // --- 4. Draw Fire Dots (Canvas) ---
-        ctx.fillStyle = "red";
-        filteredData.forEach(d => {
-            const [x, y] = projection([+d.longitude, +d.latitude]);
-            if (!isNaN(x) && !isNaN(y)) {
-                ctx.beginPath();
-                ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        });
+        // --- Draw fire dots ---
+        drawFireDots(filteredData);
     });
 }
 
