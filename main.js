@@ -273,11 +273,64 @@ const CONTINENT_MAP = {
 // --- 2. Global State and Data Storage ---
 let allData = {}; // Master object to store data: { "Africa": [{...}, {...}], "Asia": [...] }
 let activeContinent = "Africa"; // Initial view
+let activeMonth = 1; // default January
+const monthNames = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+let playInterval = null;
+const monthSlider = document.getElementById("month-slider");
+const playBtn = document.getElementById("play-btn");
+
+playBtn.addEventListener("click", () => {
+    if (playInterval) {
+        // Pause
+        clearInterval(playInterval);
+        playInterval = null;
+        playBtn.textContent = "▶️";
+    } else {
+        // Play
+        playBtn.textContent = "⏸️";
+        playInterval = setInterval(() => {
+            activeMonth += 1;
+            if (activeMonth > 12) activeMonth = 1; // Loop back to January
+            monthSlider.value = activeMonth;
+            document.getElementById("month-label").innerText = "Month: " + monthNames[activeMonth - 1];
+            drawMap();
+        }, 1000); // change 1000 to smaller value for faster animation
+    }
+});
+
+const resetBtn = document.getElementById("reset-btn");
+
+resetBtn.addEventListener("click", () => {
+    // Stop animation if playing
+    if (playInterval) {
+        clearInterval(playInterval);
+        playInterval = null;
+        playBtn.textContent = "▶️";
+    }
+
+    // Reset month to January
+    activeMonth = 1;
+    monthSlider.value = 1;
+    document.getElementById("month-label").innerText = "Month: January";
+
+    drawMap(); // redraw map with January data
+});
 
 // --- 3. Filter Function called by onchange event ---
 window.filterMap = function(continentName) {
     activeContinent = continentName;
     console.log(`Switching view to: ${activeContinent}`);
+
+    // Reset month slider to January
+    activeMonth = 1;
+    const monthSlider = document.getElementById("month-slider");
+    monthSlider.value = 1;
+    document.getElementById("month-label").innerText = "Month: January";
+
     drawMap(); // Redraw the map with the new filter
 };
 
@@ -293,7 +346,11 @@ function drawMap() {
     ctx.clearRect(0, 0, width, height);
     svg.selectAll("*").remove();
 
-    const filteredData = allData[activeContinent] || [];
+    const filteredData = (allData[activeContinent] || []).filter(d => {
+    // Assuming your CSV has a column 'acq_date' in format YYYY-MM-DD
+    const month = new Date(d.acq_date).getMonth() + 1; // JS months are 0-based
+    return month === activeMonth;
+});
     
     // 4.1 Projection Setup
     d3.json("https://unpkg.com/world-atlas@2/countries-50m.json").then(world => {
@@ -404,3 +461,9 @@ Promise.all(continentPromises).then(results => {
 
 // Add Resize Listener
 window.addEventListener("resize", drawMap);
+
+document.getElementById("month-slider").addEventListener("input", function() {
+    activeMonth = +this.value;
+    document.getElementById("month-label").innerText = "Month: " + monthNames[activeMonth - 1];
+    drawMap(); // redraw the map with filtered fire points
+});

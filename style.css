@@ -1,23 +1,50 @@
+/* Reset basic margins and padding */
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* Prevent scrollbars */
+}
+
+/* General body styling and background */
 body {
-  font-family: sans-serif;
-  text-align: center;
-  background-color: #f9f9f9;
-  margin: 0;
+    font-family: sans-serif;
+    text-align: center;
+    background-color: #f9f9f9;
 }
 
 h1 {
   margin-top: 20px;
 }
 
-#map, canvas {
-  position: absolute; 
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  margin: 0;
+/* Ensure SVG and Canvas fill the viewport and are positioned absolutely */
+#map, #dots {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
 }
 
+/* Place SVG (map outline) below Canvas (fire points) */
+#map {
+    z-index: 5;
+    background: #f0f0f0; /* Light background for the map area */
+}
+
+/* Place Canvas (fire points) above SVG */
+#dots {
+    z-index: 10;
+    /* This makes the background transparent so the SVG is visible */
+}
+
+/* New: Make the Canvas layer ignore mouse events so clicks go through to the SVG map */
+canvas {
+  pointer-events: none; 
+}
+
+/* New: Styling for D3 elements */
 .country {
   fill: #eee;
   stroke: #aaa;
@@ -29,11 +56,7 @@ h1 {
   opacity: 0.7;
 }
 
-canvas {
-  pointer-events:none; /* map interaction */
-}
-
-/* style.css (Add or modify this block) */
+/* New: Selector positioning and styling */
 #continent-selector {
   /* Positioning is necessary for z-index to work */
   position: absolute; 
@@ -49,4 +72,96 @@ canvas {
   background-color: white;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+
+#month-slider-container {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 10px 15px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  text-align: center;
+  z-index: 15;
+  font-family: sans-serif;
+}
+
+#month-label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #333;
+}
+
+#month-slider {
+  width: 200px;
+  height: 6px;
+  -webkit-appearance: none;
+  background: #ddd;
+  border-radius: 5px;
+  outline: none;
+  transition: background 0.3s;
+}
+
+#month-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff4500; 
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0,0,0,0.3);
+  transition: background 0.3s;
+}
+
+#month-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff4500;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0,0,0,0.3);
+}
+
+#slider-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#play-btn {
+  background-color: #ff4500; 
+  border: none;
+  color: white;
+  font-size: 16px;
+  padding: 6px 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transition: background 0.3s, transform 0.2s;
+}
+
+#play-btn:hover {
+  background-color: #ff6347;
+  transform: scale(1.1);
+}
+
+#reset-btn {
+  background-color: #555; 
+  border: none;
+  color: white;
+  font-size: 16px;
+  padding: 6px 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transition: background 0.3s, transform 0.2s;
+}
+
+#reset-btn:hover {
+  background-color: #777;
+  transform: scale(1.1);
 }
