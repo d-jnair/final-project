@@ -165,3 +165,9 @@ canvas {
   background-color: #777;
   transform: scale(1.1);
 }
+
+.fire-tooltip {
+    transition: opacity 0.15s ease;
+    color: #333;
+    max-width: 260px;
+}

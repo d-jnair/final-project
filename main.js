@@ -270,6 +270,17 @@ const CONTINENT_MAP = {
     // NOTE: You must update the file paths below to match where your data for these continents is stored.
 };
 
+const COUNTRY_NAME_FIX = {
+  "Dem. Rep. Congo": "Democratic Republic of the Congo",
+  "Central African Rep.": "Central African Republic",
+  "Eq. Guinea": "Equatorial Guinea",
+  "S. Sudan": "South Sudan",
+  "Dominican Rep.": "Dominican Republic",
+  
+
+};
+
+
 // --- 2. Global State and Data Storage ---
 let allData = {}; // Master object to store data: { "Africa": [{...}, {...}], "Asia": [...] }
 let activeContinent = "Africa"; // Initial view
@@ -398,7 +409,32 @@ function drawMap() {
             .attr("d", path)
             .attr("fill", "#ddd")
             .attr("stroke", "#333")
-            .attr("stroke-width", 0.6);
+            .attr("stroke-width", 0.6)
+            // --- Tooltip Interactivity ---
+            .on("mouseover", function(event, d) {
+                const countryName = d.properties.name;
+                const csvCountryName = COUNTRY_NAME_FIX[countryName] || countryName;
+                const fires = (allData[activeContinent] || []).filter(
+                    f => f.country === csvCountryName && (new Date(f.acq_date).getMonth() + 1) === activeMonth);
+                const fireCount = fires.length;
+                const meanFRP = (fireCount > 0 ? (fires.reduce((sum, f) => sum + (+f.frp || 0), 0) / fireCount).toFixed(1) : 'N/A');
+                const meanBright = fireCount > 0 ? (fires.reduce((sum, f) => sum + (+f.brightness || 0), 0) / fireCount).toFixed(1) : 'N/A';
+                const continentFireCount = (allData[activeContinent] || []).filter(
+                    d => (new Date(d.acq_date).getMonth() + 1) === activeMonth).length;
+                const prop = (fireCount > 0 && continentFireCount > 0) ? ((fireCount / continentFireCount) * 100).toFixed(1) : 'N/A';
+
+                const html = `<strong>${countryName}</strong><br>Fires: ${fireCount}<br>Mean FRP: ${meanFRP}<br>Mean Brightness: ${meanBright}<br>% of Continent Fires: ${prop}%`;
+                showTooltip(event, html);
+                d3.select(this).attr("fill", "rgba(170, 203, 255, 1)");
+
+            })
+            .on("mousemove", function(event) {
+                moveTooltip(event);
+            })
+            .on("mouseout", function(event, d) {
+                hideTooltip();
+                d3.select(this).attr("fill", "#ddd");
+            });
 
         // Save projection for fire dots
         window.currentProjection = projection;
@@ -450,3 +486,43 @@ document.getElementById("month-slider").addEventListener("input", function() {
     document.getElementById("month-label").innerText = "Month: " + monthNames[activeMonth - 1];
     drawMap(); // redraw the map with filtered fire points
 });
+
+
+
+// Creating the tooltip!!!
+    // Create (or reuse) a tooltip div
+if (!window.fireTooltip) {
+    window.fireTooltip = d3.select("body").append("div")
+        .attr("class", "fire-tooltip")
+        .style("position", "absolute")
+        .style("background", "rgba(255,255,255,0.95)")
+        .style("border", "1px solid #333")
+        .style("padding", "8px 12px")
+        .style("border-radius", "7px")
+        .style("pointer-events", "none")
+        .style("font-size", "14px")
+        .style("z-index", "9999")
+        .style("box-shadow", "0 2px 8px rgba(0,0,0,0.2)")
+        .style("opacity", 0);
+}
+
+function showTooltip(event, html) {
+    window.fireTooltip.html(html)
+        .style("left", (event.pageX + 12) + "px")
+        .style("top", (event.pageY - 30) + "px")
+        .style("opacity", 1);
+}
+
+function moveTooltip(event) {
+    window.fireTooltip
+        .style("left", (event.pageX + 12) + "px")
+        .style("top", (event.pageY - 30) + "px");
+}
+
+function hideTooltip() {
+    window.fireTooltip.style("opacity", 0);
+}
+
+
+
+
