@@ -296,7 +296,7 @@ playBtn.addEventListener("click", () => {
             activeMonth += 1;
             if (activeMonth > 12) activeMonth = 1; // Loop back to January
             monthSlider.value = activeMonth;
-            document.getElementById("month-label").innerText = "Month: " + monthNames[activeMonth - 1] + " 2024";
+            document.getElementById("month-label").innerText = "Month: " + monthNames[activeMonth - 1];
             drawMap();
         }, 1000); // change 1000 to smaller value for faster animation
     }
@@ -315,7 +315,7 @@ resetBtn.addEventListener("click", () => {
     // Reset month to January
     activeMonth = 1;
     monthSlider.value = 1;
-    document.getElementById("month-label").innerText = "Month: January 2024";
+    document.getElementById("month-label").innerText = "Month: January";
 
     drawMap(); // redraw map with January data
 });
@@ -329,7 +329,7 @@ window.filterMap = function(continentName) {
     activeMonth = 1;
     const monthSlider = document.getElementById("month-slider");
     monthSlider.value = 1;
-    document.getElementById("month-label").innerText = "Month: January 2024";
+    document.getElementById("month-label").innerText = "Month: January";
 
     drawMap(); // Redraw the map with the new filter
 };
@@ -352,6 +352,7 @@ function drawFireDots(data) {
     });
 }
 
+
 // --- 4. Function to Draw/Redraw Everything ---
 function drawMap() {
     const width = window.innerWidth;
@@ -363,41 +364,46 @@ function drawMap() {
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
     ctx.clearRect(0, 0, width, height);
 
+    // Filter data for the selected month
     const filteredData = (allData[activeContinent] || []).filter(d => {
         const month = new Date(d.acq_date).getMonth() + 1;
         return month === activeMonth;
     });
 
-    // Projection setup (reuse projection across redraws)
+    // Load world map
     d3.json("https://unpkg.com/world-atlas@2/countries-50m.json").then(world => {
         const countries = topojson.feature(world, world.objects.countries).features;
         const countriesToDraw = CONTINENT_MAP[activeContinent];
+
+        // Filter countries for the continent
         const mapFeatures = countries.filter(d =>
             countriesToDraw.includes(d.properties.name)
         );
 
-        if (!svg.selectAll("path").nodes().length) {
-            // Only draw the continent outlines once
-            const collection = { type: "FeatureCollection", features: mapFeatures };
-            const projection = d3.geoMercator().fitSize([width, height], collection);
-            const path = d3.geoPath().projection(projection);
+        if (!mapFeatures.length) return;
 
-            svg.append("g")
-                .attr("id", "continent-layer")
-                .selectAll("path")
-                .data(mapFeatures)
-                .enter()
-                .append("path")
-                .attr("d", path)
-                .attr("fill", "#ddd")
-                .attr("stroke", "#333")
-                .attr("stroke-width", 0.6);
+        // --- Compute new projection for the continent ---
+        const collection = { type: "FeatureCollection", features: mapFeatures };
+        const projection = d3.geoMercator().fitSize([width, height], collection);
+        const path = d3.geoPath().projection(projection);
 
-            // Save projection for later
-            window.currentProjection = projection;
-        }
-        
-        // --- Draw fire dots ---
+        // Clear SVG and redraw continent
+        svg.selectAll("*").remove();
+        svg.append("g")
+            .attr("id", "continent-layer")
+            .selectAll("path")
+            .data(mapFeatures)
+            .enter()
+            .append("path")
+            .attr("d", path)
+            .attr("fill", "#ddd")
+            .attr("stroke", "#333")
+            .attr("stroke-width", 0.6);
+
+        // Save projection for fire dots
+        window.currentProjection = projection;
+
+        // Draw fire dots smoothly
         drawFireDots(filteredData);
     });
 }
