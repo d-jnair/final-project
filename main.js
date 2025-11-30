@@ -4,107 +4,34 @@ const svg = d3.select("svg");
 const canvas = document.getElementById("dots");
 const ctx = canvas.getContext("2d");
 
-const CONTINENT_DATA = {
-  "Africa": [
-    'Algeria', 'Angola', 'Benin', 'Botswana', 'Burkina Faso', 'Burundi', 'Cameroon', 'Cape Verde',
+const COUNTRY_NAMES = [
+    'Algeria', 'Angola', 'Benin', 'Botswana', 'Burkina Faso', 'Burundi', 'Cameroon', 'Cape Verde', 'Congo',
     'Central African Republic', 'Chad', 'Comoros', 'Cote d Ivoire', 'Democratic Republic of the Congo',
-    'Djibouti', 'Egypt', 'Equatorial Guinea', 'Eritrea', 'Ethiopia', 'Gabon', 'Ghana', 'Guinea-Bissau',
-    'Guinea', 'Kenya', 'Lesotho', 'Liberia', 'Libya', 'Madagascar', 'Malawi', 'Mali', 'Mauritania',
-    'Mauritius', 'Mayotte', 'Morocco', 'Mozambique', 'Namibia', 'Niger', 'Nigeria', 'Congo',
+    'Djibouti', 'Egypt', 'Equatorial Guinea', 'Eritrea', 'eSwatini', 'Ethiopia', 'Gabon', 'Ghana', 
+    'Guinea-Bissau', 'Guinea', 'Kenya', 'Lesotho', 'Liberia', 'Libya', 'Madagascar', 'Malawi', 'Mali', 
+    'Mauritania', 'Mauritius', 'Mayotte', 'Morocco', 'Mozambique', 'Namibia', 'Niger', 'Nigeria',
     'Reunion', 'Rwanda', 'Saint Helena', 'Sao Tome and Principe', 'Senegal', 'Seychelles',
-    'Sierra Leone', 'Somalia', 'South Africa', 'South Sudan', 'Sudan', 'eSwatini', 'Tanzania',
+    'Sierra Leone', 'Somalia', 'South Africa', 'South Sudan', 'Sudan', 'Tanzania',
     'The Gambia', 'Togo', 'Tunisia', 'Uganda', 'Zambia', 'Zimbabwe'
-  ],
-  "North America": ['Antigua and Barbuda', 'Aruba', 'Bahamas', 'Barbados', 'Belize',
-    'Canada', 'Cayman Islands', 'Costa Rica', 'Cuba', 'Curacao',
-    'Dominica', 'Dominican Republic', 'El Salvador', 'Greenland',
-    'Guadeloupe', 'Guatemala', 'Haiti', 'Honduras', 'Jamaica',
-    'Martinique', 'Mexico', 'Montserrat', 'Nicaragua', 'Panama',
-    'Puerto Rico', 'Saint Kitts and Nevis', 'Saint Lucia',
-    'Saint Vincent and the Grenadines', 'Trinidad and Tobago',
-    'United States of America', 'United States Minor Outlying Islands'],
-  "South America": ['Argentina', 'Bolivia', 'Brazil', 'Chile', 'Colombia', 'Ecuador',
-    'French Guiana', 'Guyana', 'Paraguay', 'Peru', 'Suriname',
-    'Uruguay', 'Venezuela'],
-  "Asia": ['Afghanistan', 'Armenia', 'Azerbaijan', 'Bahrain', 'Bangladesh',
-    'Bhutan', 'Brunei', 'Cambodia', 'China', 'Cyprus',
-    'North Korea', 'Georgia', 'Hong Kong', 'India', 'Indonesia',
-    'Iran', 'Iraq', 'Israel', 'Japan', 'Jordan', 'Kazakhstan',
-    'Kuwait', 'Kyrgyzstan', 'Laos', 'Lebanon', 'Malaysia',
-    'Maldives', 'Mongolia', 'Myanmar', 'Nepal', 'Oman', 'Pakistan',
-    'Palestine', 'Philippines', 'Qatar', 'South Korea',
-    'Saudi Arabia', 'Singapore', 'Sri Lanka', 'Syria', 'Taiwan',
-    'Tajikistan', 'Thailand', 'Timor-Leste', 'Turkey', 'Turkmenistan',
-    'United Arab Emirates', 'Uzbekistan', 'Vietnam', 'Yemen'],
-  "Oceania": ['American Samoa', 'Australia', 'Fiji', 'French Polynesia', 'Guam',
-    'Heard I and McDonald Islands', 'New Caledonia', 'New Zealand',
-    'Northern Mariana Islands', 'Papua New Guinea', 'Samoa',
-    'Solomon Islands', 'Tonga', 'Vanuatu'],
-  "Europe": ['Albania', 'Andorra', 'Austria', 'Belarus', 'Belgium',
-    'Bosnia and Herzegovina', 'Bulgaria', 'Croatia', 'Czech Republic',
-    'Denmark', 'Estonia', 'Finland', 'France', 'Germany', 'Greece',
-    'Hungary', 'Iceland', 'Ireland', 'Italy', 'Kosovo', 'Latvia',
-    'Lithuania', 'Luxembourg', 'Macedonia',
-    'Malta', 'Moldova', 'Montenegro', 'Netherlands', 'Norway',
-    'Poland', 'Portugal', 'Romania', 'Russia', 'Serbia',
-    'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland',
-    'Ukraine', 'United Kingdom']
-};
+  ];
 
-const CONTINENT_MAP = {
-  "Africa": [
+const COUNTRY_MAP = [
     'Algeria', 'Angola', 'Benin', 'Botswana', 'Burkina Faso', 'Burundi', 'Cameroon', 'Cape Verde',
-    'Central African Rep.', 'Chad', 'Comoros', "CÃ´te d'Ivoire", 'Dem. Rep. Congo',
+    'Central African Rep.', 'Chad', 'Comoros', "Côte d'Ivoire", 'Dem. Rep. Congo',
     'Djibouti', 'Egypt', 'Eq. Guinea', 'Eritrea', 'Ethiopia', 'Gabon', 'Ghana', 'Guinea-Bissau',
     'Guinea', 'Kenya', 'Lesotho', 'Liberia', 'Libya', 'Madagascar', 'Malawi', 'Mali', 'Mauritania',
     'Mauritius', 'Mayotte', 'Morocco', 'Mozambique', 'Namibia', 'Niger', 'Nigeria', 'Congo',
     'Reunion', 'Rwanda', 'Saint Helena', 'Sao Tome and Principe', 'Senegal', 'Seychelles',
     'Sierra Leone', 'Somalia', 'South Africa', 'S. Sudan', 'Sudan', 'eSwatini', 'Tanzania',
     'Gambia', 'Togo', 'Tunisia', 'Uganda', 'Zambia', 'Zimbabwe', 'W. Sahara', 'Somaliland'
-  ],
-  "North America": ['Antigua and Barbuda', 'Aruba', 'Bahamas', 'Barbados', 'Belize',
-    'Canada', 'Cayman Islands', 'Costa Rica', 'Cuba', 'Curacao',
-    'Dominica', 'Dominican Rep.', 'El Salvador', 'Greenland',
-    'Guadeloupe', 'Guatemala', 'Haiti', 'Honduras', 'Jamaica',
-    'Martinique', 'Mexico', 'Montserrat', 'Nicaragua', 'Panama',
-    'Puerto Rico', 'Saint Kitts and Nevis', 'Saint Lucia',
-    'Saint Vincent and the Grenadines', 'Trinidad and Tobago',
-    'United States of America', 'United States Minor Outlying Islands'],
-  "South America": ['Argentina', 'Bolivia', 'Brazil', 'Chile', 'Colombia', 'Ecuador',
-    'French Guiana', 'Guyana', 'Paraguay', 'Peru', 'Suriname',
-    'Uruguay', 'Venezuela'],
-  "Asia": ['Afghanistan', 'Armenia', 'Azerbaijan', 'Bahrain', 'Bangladesh',
-    'Bhutan', 'Brunei', 'Cambodia', 'China', 'N. Cyprus',
-    'North Korea', 'Georgia', 'Hong Kong', 'India', 'Indonesia',
-    'Iran', 'Iraq', 'Israel', 'Japan', 'Jordan', 'Kazakhstan',
-    'Kuwait', 'Kyrgyzstan', 'Laos', 'Lebanon', 'Malaysia',
-    'Maldives', 'Mongolia', 'Myanmar', 'Nepal', 'Oman', 'Pakistan',
-    'Palestine', 'Philippines', 'Qatar', 'South Korea',
-    'Saudi Arabia', 'Singapore', 'Sri Lanka', 'Syria', 'Taiwan',
-    'Tajikistan', 'Thailand', 'Timor-Leste', 'Turkey', 'Turkmenistan',
-    'United Arab Emirates', 'Uzbekistan', 'Vietnam', 'Yemen'],
-  "Oceania": ['American Samoa', 'Australia', 'Fiji', 'French Polynesia', 'Guam',
-    'Heard I and McDonald Islands', 'New Caledonia', 'New Zealand',
-    'Northern Mariana Islands', 'Papua New Guinea', 'Samoa',
-    'Solomon Is.', 'Tonga', 'Vanuatu'],
-  "Europe": ['Albania', 'Andorra', 'Austria', 'Belarus', 'Belgium',
-    'Bosnia and Herz.', 'Bulgaria', 'Croatia', 'Czechia',
-    'Denmark', 'Estonia', 'Finland', 'France', 'Germany', 'Greece',
-    'Hungary', 'Iceland', 'Ireland', 'Italy', 'Kosovo', 'Latvia',
-    'Lithuania', 'Luxembourg', 'Macedonia',
-    'Malta', 'Moldova', 'Montenegro', 'Netherlands', 'Norway',
-    'Poland', 'Portugal', 'Romania', 'Russia', 'Serbia',
-    'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland',
-    'Ukraine', 'United Kingdom']
-};
+  ];
 
 const COUNTRY_NAME_FIX = {
   "Dem. Rep. Congo": "Democratic Republic of the Congo",
   "Central African Rep.": "Central African Republic",
   "Eq. Guinea": "Equatorial Guinea",
   "S. Sudan": "South Sudan",
-  "Dominican Rep.": "Dominican Republic",
-  "CÃ´te d'Ivoire": "Cote d Ivoire",
+   "Côte d'Ivoire": "Cote d Ivoire",
   "Gambia": "The Gambia"
 };
 
@@ -179,9 +106,9 @@ resetBtn.addEventListener("click", () => {
   drawMap();
 });
 
-window.filterMap = function (continentName) {
-  activeContinent = continentName;
-  console.log(`Switching view to: ${activeContinent}`);
+window.filterMap = function () {
+  activeContinent = "Africa";
+  console.log("Showing Africa");
 
   activeMonth = 1;
   monthSlider.value = 1;
@@ -248,8 +175,8 @@ function drawMap() {
   ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
   ctx.clearRect(0, 0, width, height);
 
-  const continentRows = allData[activeContinent] || [];
-  const filteredData = continentRows.filter(d => {
+  const africa = allData['Africa'] || [];
+  const filteredData = africa.filter(d => {
     const month = new Date(d.acq_date).getMonth() + 1;
     return month === activeMonth;
   });
@@ -294,7 +221,7 @@ function drawMap() {
 
   d3.json("https://unpkg.com/world-atlas@2/countries-50m.json").then(world => {
     const countries = topojson.feature(world, world.objects.countries).features;
-    const countriesToDraw = CONTINENT_MAP[activeContinent];
+    const countriesToDraw = COUNTRY_MAP;
 
     const mapFeatures = countries.filter(d =>
       countriesToDraw.includes(d.properties.name)
@@ -322,7 +249,7 @@ function drawMap() {
         const countryName = d.properties.name;
         const csvCountryName = COUNTRY_NAME_FIX[countryName] || countryName;
 
-        const fires = (allData[activeContinent] || []).filter(
+        const fires = (allData['Africa'] || []).filter(
           f => f.country === csvCountryName &&
             (new Date(f.acq_date).getMonth() + 1) === activeMonth
         );
@@ -334,7 +261,7 @@ function drawMap() {
           ? (fires.reduce((sum, f) => sum + (+f.brightness || 0), 0) / fireCount).toFixed(1)
           : 'N/A';
 
-        const continentFireCount = (allData[activeContinent] || []).filter(
+        const continentFireCount = (allData['Africa'] || []).filter(
           dd => (new Date(dd.acq_date).getMonth() + 1) === activeMonth
         ).length;
         const prop = (fireCount > 0 && continentFireCount > 0)
@@ -364,34 +291,26 @@ function drawMap() {
   });
 }
 
-function getFilePathsForContinent(continent) {
-  const countries = CONTINENT_DATA[continent];
-  return countries.map(c =>
-    `modis_2024_all_countries/modis/2024/modis_2024_${c.replace(/ /g, "_")}.csv`
+function getFilePaths() {
+  return COUNTRY_NAMES.map(c =>
+    `africa/modis_2024_${c.replace(/ /g, "_")}.csv`
   );
 }
 
-function loadContinentData(continent) {
-  const files = getFilePathsForContinent(continent);
-  const countries = CONTINENT_DATA[continent];
-
+function loadData() {
+  const files = getFilePaths();
   return Promise.all(files.map((f, i) =>
-    d3.csv(f).then(data => data.map(d => ({ ...d, country: countries[i] })))
+    d3.csv(f).then(data => data.map(d => ({ ...d, country: COUNTRY_NAMES[i] })))
   )).then(dfs => dfs.flat());
 }
 
-const continentPromises = Object.keys(CONTINENT_DATA).map(continent =>
-  loadContinentData(continent).then(data => ({ continent, data }))
-);
-
-Promise.all(continentPromises).then(results => {
-  results.forEach(({ continent, data }) => {
-    allData[continent] = data;
-  });
-  console.log("All continental fire points loaded:",
-    Object.keys(allData).map(k => `${k}: ${allData[k].length}`).join(', '));
-  drawMap();
-}).catch(err => console.error("LOAD ERROR:", err));
+loadData()
+  .then(data => {
+    allData["Africa"] = data;
+    console.log("Africa fire points loaded:", data.length);
+    drawMap();
+  })
+  .catch(err => console.error("LOAD ERROR:", err));
 
 document.getElementById("month-slider").addEventListener("input", function () {
   activeMonth = +this.value;
