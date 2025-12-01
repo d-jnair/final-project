@@ -43,7 +43,7 @@ const AFRICA_COUNTRIES = [
 
 const AFRICA_COUNTRIES_TOPO = [
   "Algeria","Angola","Benin","Botswana","Burkina Faso","Burundi","Cameroon","Cape Verde",
-  "Central African Rep.","Chad","Comoros","CÃ´te d'Ivoire","Dem. Rep. Congo",
+  "Central African Rep.","Chad","Comoros","Côte d'Ivoire","Dem. Rep. Congo",
   "Djibouti","Egypt","Eq. Guinea","Eritrea","Ethiopia","Gabon","Ghana","Guinea-Bissau",
   "Guinea","Kenya","Lesotho","Liberia","Libya","Madagascar","Malawi","Mali","Mauritania",
   "Mauritius","Mayotte","Morocco","Mozambique","Namibia","Niger","Nigeria","Congo",
@@ -57,7 +57,7 @@ const COUNTRY_NAME_FIX = {
   "Central African Rep.": "Central African Republic",
   "Eq. Guinea": "Equatorial Guinea",
   "S. Sudan": "South Sudan",
-  "CÃ´te d'Ivoire": "Cote d Ivoire",
+  "W. Sahara": "West Sahara",
   "Gambia": "The Gambia"
 };
 
