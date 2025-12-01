@@ -1,534 +1,352 @@
-// filepath: main.js
-// Single–file main.js
-// Features:
-//   • Top dropdown: choose continent (Africa, N. America, S. America, Asia, Oceania, Europe)
-//   • Bottom-left dropdown: optional country filter within that continent
-//   • Month slider + play / reset controls
-//   • FRP-only fire visualization (no brightness toggle), with legend
-// Requires in index.html:
-//   - <svg id="map"></svg>
-//   - <canvas id="dots"></canvas>
-//   - <select id="continent-selector"></select>
-//   - <span id="month-label"></span>
-//   - <input id="month-slider" type="range" min="1" max="12" step="1">
-//   - <button id="play-btn"></button>
-//   - <button id="reset-btn"></button>
-// And d3 + topojson-client scripts loaded.
-
 console.log("Main JS is running!");
 
-// ---------- DOM + layout ----------
-const svg = (typeof d3 !== "undefined") ? d3.select("#map") : null;
-const canvas = document.getElementById("dots");
-const ctx = canvas ? canvas.getContext("2d") : null;
-
-if (svg) {
-  svg
-    .style("position", "absolute")
-    .style("top", "0px")
-    .style("left", "0px")
-    .style("width", "100%")
-    .style("height", "100%");
-}
-
-if (canvas) {
-  canvas.style.position = "absolute";
-  canvas.style.top = "0px";
-  canvas.style.left = "0px";
-  canvas.style.width = "100%";
-  canvas.style.height = "100%";
-  canvas.style.pointerEvents = "none";
-}
-
-// ---------- Data: continents / countries ----------
-const CONTINENT_DATA = {
-  "Africa": [
-    "Algeria","Angola","Benin","Botswana","Burkina Faso","Burundi","Cameroon",
-    "Cape Verde","Central African Republic","Chad","Comoros","Cote d Ivoire",
-    "Democratic Republic of the Congo","Djibouti","Egypt","Equatorial Guinea",
-    "Eritrea","Ethiopia","Gabon","Ghana","Guinea-Bissau","Guinea","Kenya",
-    "Lesotho","Liberia","Libya","Madagascar","Malawi","Mali","Mauritania",
-    "Mauritius","Mayotte","Morocco","Mozambique","Namibia","Niger","Nigeria",
-    "Congo","Reunion","Rwanda","Saint Helena","Sao Tome and Principe",
-    "Senegal","Seychelles","Sierra Leone","Somalia","South Africa",
-    "South Sudan","Sudan","eSwatini","Tanzania","The Gambia","Togo",
-    "Tunisia","Uganda","Zambia","Zimbabwe"
-  ],
-  "North America": [
-    "Antigua and Barbuda","Aruba","Bahamas","Barbados","Belize","Canada",
-    "Cayman Islands","Costa Rica","Cuba","Curacao","Dominica",
-    "Dominican Republic","El Salvador","Greenland","Guadeloupe","Guatemala",
-    "Haiti","Honduras","Jamaica","Martinique","Mexico","Montserrat",
-    "Nicaragua","Panama","Puerto Rico","Saint Kitts and Nevis","Saint Lucia",
-    "Saint Vincent and the Grenadines","Trinidad and Tobago",
-    "United States of America","United States Minor Outlying Islands"
-  ],
-  "South America": [
-    "Argentina","Bolivia","Brazil","Chile","Colombia","Ecuador",
-    "French Guiana","Guyana","Paraguay","Peru","Suriname","Uruguay","Venezuela"
-  ],
-  "Asia": [
-    "Afghanistan","Armenia","Azerbaijan","Bahrain","Bangladesh","Bhutan","Brunei",
-    "Cambodia","China","Cyprus","North Korea","Georgia","Hong Kong","India",
-    "Indonesia","Iran","Iraq","Israel","Japan","Jordan","Kazakhstan","Kuwait",
-    "Kyrgyzstan","Laos","Lebanon","Malaysia","Maldives","Mongolia","Myanmar",
-    "Nepal","Oman","Pakistan","Palestine","Philippines","Qatar","South Korea",
-    "Saudi Arabia","Singapore","Sri Lanka","Syria","Taiwan","Tajikistan",
-    "Thailand","Timor-Leste","Turkey","Turkmenistan","United Arab Emirates",
-    "Uzbekistan","Vietnam","Yemen"
-  ],
-  "Oceania": [
-    "American Samoa","Australia","Fiji","French Polynesia","Guam",
-    "Heard I and McDonald Islands","New Caledonia","New Zealand",
-    "Northern Mariana Islands","Papua New Guinea","Samoa",
-    "Solomon Islands","Tonga","Vanuatu"
-  ],
-  "Europe": [
-    "Albania","Andorra","Austria","Belarus","Belgium","Bosnia and Herzegovina",
-    "Bulgaria","Croatia","Czech Republic","Denmark","Estonia","Finland","France",
-    "Germany","Greece","Hungary","Iceland","Ireland","Italy","Kosovo","Latvia",
-    "Lithuania","Luxembourg","Macedonia","Malta","Moldova","Montenegro",
-    "Netherlands","Norway","Poland","Portugal","Romania","Russia","Serbia",
-    "Slovakia","Slovenia","Spain","Sweden","Switzerland","Ukraine",
-    "United Kingdom"
-  ]
-};
-
-// For topojson name matching; using same names here
-const CONTINENT_MAP = Object.assign({}, CONTINENT_DATA);
-
-// ---------- Global state ----------
-let allData = {};            // { continent: [rows...] }
-let activeContinent = "Africa";
-let activeCountry = null;    // null = all countries in continent
-let activeMonth = 1;         // 1–12
-const monthNames = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December"
-];
-
-const topSelect   = document.getElementById("continent-selector");
-const monthSlider = document.getElementById("month-slider");
-const playBtn     = document.getElementById("play-btn");
-const resetBtn    = document.getElementById("reset-btn");
-let playInterval  = null;
-
-// ---------- Helper: CSV file paths ----------
-function getFilePathsForContinent(continent) {
-  const countries = CONTINENT_DATA[continent] || [];
-  return countries.map(c =>
-    `modis_2024_all_countries/modis/2024/modis_2024_${c.replace(/ /g, "_")}.csv`
-  );
-}
-
-// ---------- Helper: FRP metric only ----------
-function getMetricValue(row) {
-  if (!row) return undefined;
-
-  const frpKeys = [
-    "FRP","frp","frp_val","frp50",
-    "fire_radiative_power","frp_mw"
-  ];
-
-  for (const k of frpKeys) {
-    if (Object.prototype.hasOwnProperty.call(row, k) &&
-        row[k] !== "" && row[k] !== undefined) {
-      const n = Number(row[k]);
-      if (!Number.isNaN(n)) return n;
-    }
-  }
-  return undefined;
-}
-
-// ---------- FRP legend ----------
-function updateLegend(min, max) {
-  const legend = document.getElementById("fire-legend");
-  if (!legend) return;
-
-  legend.innerHTML = "";
+// ---------- PAGE TITLE (UI ONLY, NO DATA LOGIC CHANGES) ----------
+(function createPageTitle() {
+  if (document.getElementById("page-title")) return;
 
   const title = document.createElement("div");
-  title.style.fontSize = "11px";
-  title.style.marginBottom = "4px";
-  title.textContent = "Fire Radiative Power (MW)";
-  legend.appendChild(title);
+  title.id = "page-title";
+  title.textContent = "African Wildfire Activity (2024 MODIS)";
+  title.style.position = "absolute";
+  title.style.top = "10px";
+  title.style.left = "50%";
+  title.style.transform = "translateX(-50%)";
+  title.style.padding = "6px 14px";
+  title.style.fontSize = "20px";
+  title.style.fontWeight = "600";
+  title.style.fontFamily = "system-ui, -apple-system, sans-serif";
+  title.style.background = "rgba(255,255,255,0.9)";
+  title.style.borderRadius = "8px";
+  title.style.border = "1px solid #ccc";
+  title.style.zIndex = "9999";
 
-  const row = document.createElement("div");
-  row.style.display = "flex";
-  row.style.gap = "4px";
-
-  const color = d3.scaleSequential(d3.interpolateYlOrRd).domain([min, max]);
-
-  const steps = 5;
-  for (let i = 0; i < steps; i++) {
-    const v = min + (i / (steps - 1)) * (max - min);
-    const swatch = document.createElement("div");
-    swatch.style.width = "30px";
-    swatch.style.height = "12px";
-    swatch.style.background = color(v);
-    swatch.style.border = "1px solid rgba(0,0,0,0.08)";
-    row.appendChild(swatch);
-  }
-
-  legend.appendChild(row);
-}
-
-// ---------- Top-right FRP info box ----------
-(function createFRPBox() {
-  if (document.getElementById("fire-mode-ui")) return;
-
-  const box = document.createElement("div");
-  box.id = "fire-mode-ui";
-  box.style.position = "absolute";
-  box.style.top = "10px";
-  box.style.right = "10px";
-  box.style.background = "rgba(255,255,255,0.96)";
-  box.style.padding = "8px";
-  box.style.borderRadius = "6px";
-  box.style.font = "12px sans-serif";
-  box.style.zIndex = 10050;
-  box.style.boxShadow = "0 1px 8px rgba(0,0,0,0.12)";
-  box.innerHTML = `
-    <div style="font-weight:600;margin-bottom:6px">Fire Radiative Power</div>
-    <div id="fire-legend" style="margin-top:4px;"></div>
-  `;
-  document.body.appendChild(box);
+  document.body.appendChild(title);
 })();
+// ---------------------------------------------------------------
 
-// ---------- Bottom-left country dropdown ----------
-(function createCountryDropdown() {
-  if (document.getElementById("country-select")) return;
+const svg = d3.select("svg");
+const canvas = document.getElementById("dots");
+const ctx = canvas.getContext("2d");
 
-  const sel = document.createElement("select");
-  sel.id = "country-select";
-  sel.style.position = "absolute";
-  sel.style.left = "12px";
-  sel.style.bottom = "12px";
-  sel.style.padding = "8px 10px";
-  sel.style.borderRadius = "6px";
-  sel.style.border = "2px solid #2b6cb0";
-  sel.style.background = "#fff";
-  sel.style.zIndex = 10050;
-  sel.title = "Filter by country";
-  document.body.appendChild(sel);
+// AFRICA-ONLY COUNTRY LISTS (CSV names + topojson names)
+const AFRICA_COUNTRIES = [
+  'Algeria', 'Angola', 'Benin', 'Botswana', 'Burkina Faso', 'Burundi', 'Cameroon', 'Cape Verde',
+  'Central African Republic', 'Chad', 'Comoros', 'Cote d Ivoire', 'Democratic Republic of the Congo',
+  'Djibouti', 'Egypt', 'Equatorial Guinea', 'Eritrea', 'Ethiopia', 'Gabon', 'Ghana', 'Guinea-Bissau',
+  'Guinea', 'Kenya', 'Lesotho', 'Liberia', 'Libya', 'Madagascar', 'Malawi', 'Mali', 'Mauritania',
+  'Mauritius', 'Mayotte', 'Morocco', 'Mozambique', 'Namibia', 'Niger', 'Nigeria', 'Congo',
+  'Reunion', 'Rwanda', 'Saint Helena', 'Sao Tome and Principe', 'Senegal', 'Seychelles',
+  'Sierra Leone', 'Somalia', 'South Africa', 'South Sudan', 'Sudan', 'eSwatini', 'Tanzania',
+  'The Gambia', 'Togo', 'Tunisia', 'Uganda', 'Zambia', 'Zimbabwe'
+];
 
-  sel.addEventListener("change", function () {
-    const v = this.value;
-    activeCountry = v || null;
+const AFRICA_COUNTRIES_TOPO = [
+  'Algeria', 'Angola', 'Benin', 'Botswana', 'Burkina Faso', 'Burundi', 'Cameroon', 'Cape Verde',
+  'Central African Rep.', 'Chad', 'Comoros', "CÃ´te d'Ivoire", 'Dem. Rep. Congo',
+  'Djibouti', 'Egypt', 'Eq. Guinea', 'Eritrea', 'Ethiopia', 'Gabon', 'Ghana', 'Guinea-Bissau',
+  'Guinea', 'Kenya', 'Lesotho', 'Liberia', 'Libya', 'Madagascar', 'Malawi', 'Mali', 'Mauritania',
+  'Mauritius', 'Mayotte', 'Morocco', 'Mozambique', 'Namibia', 'Niger', 'Nigeria', 'Congo',
+  'Reunion', 'Rwanda', 'Saint Helena', 'Sao Tome and Principe', 'Senegal', 'Seychelles',
+  'Sierra Leone', 'Somalia', 'South Africa', 'S. Sudan', 'Sudan', 'eSwatini', 'Tanzania',
+  'Gambia', 'Togo', 'Tunisia', 'Uganda', 'Zambia', 'Zimbabwe', 'W. Sahara', 'Somaliland'
+];
 
-    // Make sure activeContinent matches this country
-    if (activeCountry) {
-      for (const cont of Object.keys(CONTINENT_DATA)) {
-        if (CONTINENT_DATA[cont].includes(activeCountry)) {
-          activeContinent = cont;
-          if (topSelect) topSelect.value = cont;
-          break;
-        }
-      }
-    }
-
-    // Reset month to January when switching countries
-    activeMonth = 1;
-    if (monthSlider) monthSlider.value = 1;
-    const label = document.getElementById("month-label");
-    if (label) label.innerText = "Month: " + monthNames[activeMonth - 1];
-
-    drawMap();
-  });
-
-  // Make globally accessible for continent switches
-  window.updateCountryDropdown = function (continent) {
-    const s = document.getElementById("country-select");
-    if (!s) return;
-
-    s.innerHTML = "";
-    const allOpt = document.createElement("option");
-    allOpt.value = "";
-    allOpt.textContent = "All countries";
-    s.appendChild(allOpt);
-
-    const list = CONTINENT_DATA[continent] || [];
-    list.forEach(c => {
-      const o = document.createElement("option");
-      o.value = c;
-      o.textContent = c;
-      s.appendChild(o);
-    });
-
-    s.value = "";
-    s.style.display = list.length ? "inline-block" : "none";
-  };
-
-  window.updateCountryDropdown(activeContinent);
-})();
-
-// ---------- Top continent dropdown: ONLY 6 regions ----------
-function populateRegionDropdown() {
-  if (!topSelect) return;
-
-  topSelect.innerHTML = "";
-  const defaultOpt = document.createElement("option");
-  defaultOpt.value = "";
-  defaultOpt.textContent = "Select continent...";
-  topSelect.appendChild(defaultOpt);
-
-  ["Africa","North America","South America","Asia","Oceania","Europe"]
-    .forEach(cont => {
-      const opt = document.createElement("option");
-      opt.value = cont;
-      opt.textContent = cont;
-      topSelect.appendChild(opt);
-    });
-
-  topSelect.onchange = function () {
-    const v = this.value;
-    if (!v) return;
-    filterMap(v); // continent name
-  };
-}
-
-// Called whenever top dropdown changes continent
-window.filterMap = function (continentName) {
-  if (!Object.prototype.hasOwnProperty.call(CONTINENT_DATA, continentName)) return;
-
-  activeContinent = continentName;
-  activeCountry = null;
-
-  // Reset month to January
-  activeMonth = 1;
-  if (monthSlider) monthSlider.value = 1;
-  const label = document.getElementById("month-label");
-  if (label) label.innerText = "Month: " + monthNames[activeMonth - 1];
-
-  if (typeof window.updateCountryDropdown === "function") {
-    window.updateCountryDropdown(activeContinent);
-  }
-
-  drawMap();
+const COUNTRY_NAME_FIX = {
+  "Dem. Rep. Congo": "Democratic Republic of the Congo",
+  "Central African Rep.": "Central African Republic",
+  "Eq. Guinea": "Equatorial Guinea",
+  "S. Sudan": "South Sudan",
+  "CÃ´te d'Ivoire": "Cote d Ivoire",
+  "Gambia": "The Gambia"
 };
 
-// ---------- Draw fire dots ----------
-function drawFireDots(data) {
-  if (!ctx || !window.currentProjection) return;
+let allData = {};           // allData["Africa"] only
+let activeContinent = "Africa"; // fixed to Africa
+let activeMonth = 1;
+let showRegionFRP = false;
 
-  const projection = window.currentProjection;
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+const monthNames = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 
-  // Make canvas pixel-perfect
-  canvas.width  = Math.round(w * window.devicePixelRatio);
-  canvas.height = Math.round(h * window.devicePixelRatio);
-  ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
-  ctx.clearRect(0, 0, w, h);
+let playInterval = null;
+const monthSlider = document.getElementById("month-slider");
+const playBtn = document.getElementById("play-btn");
+const resetBtn = document.getElementById("reset-btn");
 
-  const vals = data
-    .map(d => getMetricValue(d))
-    .filter(v => Number.isFinite(v));
+// ----------------- REGION FRP TOGGLE BUTTON -----------------
+(function createRegionToggle() {
+  if (document.getElementById("frp-region-toggle")) return;
+  const btn = document.createElement("button");
+  btn.id = "frp-region-toggle";
+  btn.textContent = "Region FRP: off";
+  btn.style.position = "absolute";
+  btn.style.top = "10px";
+  btn.style.left = "10px";
+  btn.style.zIndex = 9999;
+  btn.style.padding = "6px 10px";
+  btn.style.borderRadius = "6px";
+  btn.style.border = "1px solid #444";
+  btn.style.background = "rgba(255,255,255,0.9)";
+  btn.style.cursor = "pointer";
+  btn.style.fontSize = "12px";
+  document.body.appendChild(btn);
 
-  const min = vals.length ? d3.min(vals) : 0;
-  const max = vals.length ? d3.max(vals) : 1;
-
-  const colorScale  = d3.scaleSequential(d3.interpolateYlOrRd).domain([min, max]);
-  const radiusScale = d3.scaleSqrt().domain([min, max]).range([0.7, 4.0]);
-
-  updateLegend(min, max);
-
-  ctx.globalCompositeOperation = "source-over";
-
-  for (const d of data) {
-    const lon = +d.longitude;
-    const lat = +d.latitude;
-    if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
-
-    const p = projection([lon, lat]);
-    if (!p || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) continue;
-
-    const v = getMetricValue(d);
-    const r = Number.isFinite(v) ? radiusScale(v) : 1.0;
-
-    ctx.beginPath();
-    ctx.fillStyle = Number.isFinite(v)
-      ? colorScale(v)
-      : "rgba(180,180,180,0.5)";
-    ctx.arc(p[0], p[1], r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
-// ---------- Draw map + dots ----------
-function drawMap() {
-  const width  = window.innerWidth;
-  const height = window.innerHeight;
-  if (svg) svg.attr("width", width).attr("height", height);
-
-  const continentRows = allData[activeContinent] || [];
-  const filtered = continentRows.filter(d => {
-    const month = d.acq_date
-      ? (new Date(d.acq_date).getMonth() + 1)
-      : activeMonth;
-    if (month !== activeMonth) return false;
-    if (!activeCountry) return true;
-    const name = d.country || "";
-    return name === activeCountry || name === activeCountry.replace(/_/g, " ");
-  });
-
-  d3.json("https://unpkg.com/world-atlas@2/countries-50m.json")
-    .then(world => {
-      const features = topojson.feature(world, world.objects.countries).features;
-
-      // Countries to draw for this continent
-      let namesToDraw = CONTINENT_MAP[activeContinent] || [];
-
-      if (activeCountry) {
-        const match = features.find(f => {
-          const n = f.properties && f.properties.name;
-          if (!n) return false;
-          return (
-            n === activeCountry ||
-            n === activeCountry.replace(/_/g, " ") ||
-            n.includes(activeCountry)
-          );
-        });
-        namesToDraw = match && match.properties && match.properties.name
-          ? [match.properties.name]
-          : [activeCountry];
-      }
-
-      let mapFeatures = features.filter(f =>
-        namesToDraw.includes(f.properties.name)
-      );
-
-      if (!mapFeatures.length) {
-        // Fallback to continent-level features if country matching fails
-        mapFeatures = features.filter(f =>
-          (CONTINENT_MAP[activeContinent] || []).includes(f.properties.name)
-        );
-      }
-
-      if (!mapFeatures.length) {
-        console.warn("No map features found for", activeContinent, activeCountry);
-        return;
-      }
-
-      const collection = { type: "FeatureCollection", features: mapFeatures };
-      const projection = d3.geoMercator().fitSize([width, height], collection);
-      const path = d3.geoPath().projection(projection);
-
-      if (svg) {
-        svg.selectAll("*").remove();
-        svg.append("g")
-          .attr("id", "continent-layer")
-          .selectAll("path")
-          .data(mapFeatures)
-          .enter()
-          .append("path")
-          .attr("d", path)
-          .attr("fill", "#e6e6e6")
-          .attr("stroke", "#555")
-          .attr("stroke-width", 0.6);
-      }
-
-      window.currentProjection = projection;
-      drawFireDots(filtered);
-    })
-    .catch(err => {
-      console.error("MAP LOAD ERROR:", err);
-    });
-}
-
-// ---------- CSV loading ----------
-function loadContinentData(continent) {
-  const files     = getFilePathsForContinent(continent);
-  const countries = CONTINENT_DATA[continent] || [];
-
-  const promises = files.map((file, i) =>
-    d3.csv(file)
-      .then(rows =>
-        rows.map(r => Object.assign({}, r, { country: countries[i] }))
-      )
-      .catch(err => {
-        console.warn("Failed to load", file, err);
-        return [];
-      })
-  );
-
-  return Promise.all(promises).then(arrs => arrs.flat());
-}
-
-const continentPromises = Object.keys(CONTINENT_DATA).map(cont =>
-  loadContinentData(cont).then(data => ({ cont, data }))
-);
-
-Promise.all(continentPromises)
-  .then(results => {
-    results.forEach(r => {
-      allData[r.cont] = r.data;
-    });
-    console.log(
-      "Loaded rows:",
-      Object.keys(allData)
-        .map(k => `${k}: ${(allData[k] || []).length}`)
-        .join(", ")
-    );
-
-    populateRegionDropdown();
-    if (window.updateCountryDropdown) window.updateCountryDropdown(activeContinent);
-    drawMap();
-  })
-  .catch(err => {
-    console.error("LOAD ERROR:", err);
-    populateRegionDropdown();
-    if (window.updateCountryDropdown) window.updateCountryDropdown(activeContinent);
+  btn.addEventListener("click", () => {
+    showRegionFRP = !showRegionFRP;
+    btn.textContent = showRegionFRP ? "Region FRP: on" : "Region FRP: off";
     drawMap();
   });
+})();
+// -------------------------------------------------------------
 
-// ---------- Controls: play / reset / slider ----------
-if (playBtn) {
-  playBtn.addEventListener("click", () => {
-    if (playInterval) {
-      clearInterval(playInterval);
-      playInterval = null;
-      playBtn.textContent = "▶️";
-      return;
-    }
+playBtn.addEventListener("click", () => {
+  if (playInterval) {
+    clearInterval(playInterval);
+    playInterval = null;
+    playBtn.textContent = "▶️";
+  } else {
     playBtn.textContent = "⏸️";
     playInterval = setInterval(() => {
       activeMonth += 1;
       if (activeMonth > 12) activeMonth = 1;
-      if (monthSlider) monthSlider.value = activeMonth;
-      const label = document.getElementById("month-label");
-      if (label) label.innerText = "Month: " + monthNames[activeMonth - 1];
+      monthSlider.value = activeMonth;
+      document.getElementById("month-label").innerText =
+        "Month: " + monthNames[activeMonth - 1];
       drawMap();
     }, 1000);
-  });
-}
+  }
+});
 
-if (resetBtn) {
-  resetBtn.addEventListener("click", () => {
-    if (playInterval) {
-      clearInterval(playInterval);
-      playInterval = null;
-      if (playBtn) playBtn.textContent = "▶️";
+resetBtn.addEventListener("click", () => {
+  if (playInterval) {
+    clearInterval(playInterval);
+    playInterval = null;
+    playBtn.textContent = "▶️";
+  }
+
+  activeMonth = 1;
+  monthSlider.value = 1;
+  document.getElementById("month-label").innerText = "Month: January";
+
+  drawMap();
+});
+
+// If your HTML still calls filterMap(), keep this as a no-op reset to Africa.
+window.filterMap = function () {
+  activeContinent = "Africa";
+  console.log("Switching view to Africa");
+
+  activeMonth = 1;
+  monthSlider.value = 1;
+  document.getElementById("month-label").innerText = "Month: January";
+
+  drawMap();
+};
+
+function drawFireDots(data) {
+  const projection = window.currentProjection;
+  if (!projection) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "rgba(255, 69, 0, 0.6)";
+  data.forEach(d => {
+    const [x, y] = projection([+d.longitude, +d.latitude]);
+    if (!isNaN(x) && !isNaN(y)) {
+      ctx.beginPath();
+      ctx.arc(x, y, 2, 0, Math.PI * 2);
+      ctx.fill();
     }
-    activeMonth = 1;
-    if (monthSlider) monthSlider.value = 1;
-    const label = document.getElementById("month-label");
-    if (label) label.innerText = "Month: " + monthNames[0];
-    drawMap();
   });
 }
 
-if (monthSlider) {
-  monthSlider.addEventListener("input", function () {
-    activeMonth = +this.value;
-    const label = document.getElementById("month-label");
-    if (label) label.innerText = "Month: " + monthNames[activeMonth - 1];
-    drawMap();
+if (!window.fireTooltip) {
+  window.fireTooltip = d3.select("body").append("div")
+    .attr("class", "fire-tooltip")
+    .style("position", "absolute")
+    .style("background", "rgba(255,255,255,0.95)")
+    .style("border", "1px solid #333")
+    .style("padding", "8px 12px")
+    .style("border-radius", "7px")
+    .style("pointer-events", "none")
+    .style("font-size", "14px")
+    .style("z-index", "9999")
+    .style("box-shadow", "0 2px 8px rgba(0,0,0,0.2)")
+    .style("opacity", 0);
+}
+
+function showTooltip(event, html) {
+  window.fireTooltip.html(html)
+    .style("left", (event.pageX + 12) + "px")
+    .style("top", (event.pageY - 30) + "px")
+    .style("opacity", 1);
+}
+
+function moveTooltip(event) {
+  window.fireTooltip
+    .style("left", (event.pageX + 12) + "px")
+    .style("top", (event.pageY - 30) + "px");
+}
+
+function hideTooltip() {
+  window.fireTooltip.style("opacity", 0);
+}
+
+function drawMap() {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  canvas.width = width * window.devicePixelRatio;
+  canvas.height = height * window.devicePixelRatio;
+  ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+
+  // Africa rows only
+  const continentRows = allData["Africa"] || [];
+  const filteredData = continentRows.filter(d => {
+    const month = new Date(d.acq_date).getMonth() + 1;
+    return month === activeMonth;
+  });
+
+  const countryStats = new Map();
+  filteredData.forEach(row => {
+    const csvName = row.country;
+    if (!csvName) return;
+    const frpVal = +row.frp || 0;
+    if (!countryStats.has(csvName)) {
+      countryStats.set(csvName, { count: 0, sumFRP: 0 });
+    }
+    const s = countryStats.get(csvName);
+    s.count += 1;
+    if (!isNaN(frpVal)) s.sumFRP += frpVal;
+  });
+
+  const frpMeans = [];
+  countryStats.forEach(s => {
+    if (s.count > 0) {
+      s.meanFRP = s.sumFRP / s.count;
+      frpMeans.push(s.meanFRP);
+    } else {
+      s.meanFRP = NaN;
+    }
+  });
+
+  let regionColorScale = null;
+  if (showRegionFRP && frpMeans.length) {
+    const minFRP = d3.min(frpMeans);
+    const maxFRP = d3.max(frpMeans);
+    regionColorScale = d3.scaleSequential(d3.interpolateYlOrRd).domain([minFRP, maxFRP]);
+  }
+
+  function getRegionFill(topoName) {
+    if (!showRegionFRP || !regionColorScale) return "#ddd";
+    const csvName = COUNTRY_NAME_FIX[topoName] || topoName;
+    const s = countryStats.get(csvName);
+    if (!s || !isFinite(s.meanFRP)) return "#eee";
+    return regionColorScale(s.meanFRP);
+  }
+
+  d3.json("https://unpkg.com/world-atlas@2/countries-50m.json").then(world => {
+    const countries = topojson.feature(world, world.objects.countries).features;
+    const countriesToDraw = AFRICA_COUNTRIES_TOPO;
+
+    const mapFeatures = countries.filter(d =>
+      countriesToDraw.includes(d.properties.name)
+    );
+
+    if (!mapFeatures.length) return;
+
+    const collection = { type: "FeatureCollection", features: mapFeatures };
+    const projection = d3.geoMercator().fitSize([width, height], collection);
+    const path = d3.geoPath().projection(projection);
+
+    svg.selectAll("*").remove();
+    svg.append("g")
+      .attr("id", "continent-layer")
+      .selectAll("path")
+      .data(mapFeatures)
+      .enter()
+      .append("path")
+      .attr("d", path)
+      .attr("fill", d => getRegionFill(d.properties.name))
+      .attr("stroke", "#333")
+      .attr("stroke-width", 0.6)
+      .on("mouseover", function (event, d) {
+        const countryName = d.properties.name;
+        const csvCountryName = COUNTRY_NAME_FIX[countryName] || countryName;
+
+        const fires = (allData["Africa"] || []).filter(
+          f => f.country === csvCountryName &&
+            (new Date(f.acq_date).getMonth() + 1) === activeMonth
+        );
+        const fireCount = fires.length;
+        const meanFRP = (fireCount > 0
+          ? (fires.reduce((sum, f) => sum + (+f.frp || 0), 0) / fireCount).toFixed(1)
+          : 'N/A');
+        const meanBright = fireCount > 0
+          ? (fires.reduce((sum, f) => sum + (+f.brightness || 0), 0) / fireCount).toFixed(1)
+          : 'N/A';
+
+        const continentFireCount = (allData["Africa"] || []).filter(
+          dd => (new Date(dd.acq_date).getMonth() + 1) === activeMonth
+        ).length;
+        const prop = (fireCount > 0 && continentFireCount > 0)
+          ? ((fireCount / continentFireCount) * 100).toFixed(1)
+          : 'N/A';
+
+        const html = `<strong>${csvCountryName}</strong><br>
+          Fires: ${fireCount}<br>
+          Mean FRP: ${meanFRP}<br>
+          Mean Brightness: ${meanBright}<br>
+          % of Continent Fires: ${prop}%`;
+
+        showTooltip(event, html);
+        d3.select(this).attr("fill", "rgba(170, 203, 255, 1)");
+      })
+      .on("mousemove", function (event) {
+        moveTooltip(event);
+      })
+      .on("mouseout", function (event, d) {
+        hideTooltip();
+        d3.select(this).attr("fill", getRegionFill(d.properties.name));
+      });
+
+    window.currentProjection = projection;
+
+    drawFireDots(filteredData);
   });
 }
 
-// ---------- Resize + initial ----------
+// ------------- DATA LOADING: AFRICA ONLY ----------------
+function getFilePathsForAfrica() {
+  return AFRICA_COUNTRIES.map(c =>
+    `modis_2024_all_countries/modis/2024/modis_2024_${c.replace(/ /g, "_")}.csv`
+  );
+}
+
+function loadAfricaData() {
+  const files = getFilePathsForAfrica();
+  return Promise.all(files.map((f, i) =>
+    d3.csv(f).then(data => data.map(d => ({ ...d, country: AFRICA_COUNTRIES[i] })))
+  )).then(dfs => dfs.flat());
+}
+
+loadAfricaData()
+  .then(data => {
+    allData["Africa"] = data;
+    console.log("Africa fire points loaded:", data.length);
+    drawMap();
+  })
+  .catch(err => console.error("LOAD ERROR:", err));
+// --------------------------------------------------------
+
+document.getElementById("month-slider").addEventListener("input", function () {
+  activeMonth = +this.value;
+  document.getElementById("month-label").innerText =
+    "Month: " + monthNames[activeMonth - 1];
+  drawMap();
+});
+
 window.addEventListener("resize", drawMap);
-populateRegionDropdown();
-if (window.updateCountryDropdown) window.updateCountryDropdown(activeContinent);
-drawMap();
