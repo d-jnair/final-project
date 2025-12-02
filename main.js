@@ -58,7 +58,8 @@ const COUNTRY_NAME_FIX = {
   "Eq. Guinea": "Equatorial Guinea",
   "S. Sudan": "South Sudan",
   "W. Sahara": "West Sahara",
-  "Gambia": "The Gambia"
+  "Gambia": "The Gambia",
+  "Côte d'Ivoire" : "Cote d Ivoire"
 };
 
 let allData = {};            // allData["Africa"]
