@@ -33,6 +33,7 @@ h1 {
     background: #f0f0f0; /* Light background for the map area */
 }
 
+
 /* Place Canvas (fire points) above SVG */
 #dots {
     z-index: 10;

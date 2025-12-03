@@ -57,7 +57,6 @@ const COUNTRY_NAME_FIX = {
   "Central African Rep.": "Central African Republic",
   "Eq. Guinea": "Equatorial Guinea",
   "S. Sudan": "South Sudan",
-  "W. Sahara": "West Sahara",
   "Gambia": "The Gambia",
   "Côte d'Ivoire" : "Cote d Ivoire"
 };
