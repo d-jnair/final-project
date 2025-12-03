@@ -76,6 +76,88 @@ const monthSlider = document.getElementById("month-slider");
 const playBtn = document.getElementById("play-btn");
 const resetBtn = document.getElementById("reset-btn");
 
+
+// --- Chapter configuration: representative months and country sets ---
+const CHAPTERS = {
+  0: {
+    title: "Africa Wildfires 2024: From Savanna Cycles to Fire Crises",
+    text: `
+    <em>Click a chapter to explore how Africa’s fire story unfolded in 2024.</em>
+  `,
+    month: 1
+  },
+  1: {
+    title: "Chapter 1 – Early‑Year Savanna Belt (Jan–Mar)",
+    text: `
+      From January to March, the fire detections cluster across Guinea, Nigeria, Sierra Leone, the Central African Republic, and South Sudan. 
+      This is the “classic” early dry‑season belt: grass and cropland residues burned for land management. 
+      What stands out in 2024 is that the clusters are larger than the year before. 
+      That hints at an upward trend – more fires, and possibly stronger ones – even in regions where burning is routine.
+    `,
+    month: 1
+  },
+  2: {
+    title: "Chapter 2 – Mid‑Year Congo Basin Anomaly (Jul–Aug)",
+    text: `
+      By July and August, the fire front shifts south. In 2024, the Congo Basin burned about 28% more area than average, with ~4,000 fires, roughly 20% above normal. 
+      This is unusual. Rainforests here are normally too humid to burn, but 2024 brought hot, dry, windy conditions. 
+      Climate change likely made those extremes more frequent. 
+      So instead of just savanna burning, we see fire chewing into wetter forest zones – a warning sign that Africa’s fire regime is intensifying.
+    `,
+    month: 7
+  },
+  3: {
+    title: "Chapter 3 – Late‑Year Southern Peak (Sep–Dec)",
+    text: `
+      As the dry season moved south, fire activity exploded in Angola, Zambia, Zimbabwe, and South Africa. 
+      South Africa alone burned ~4 million hectares in 2024, its deadliest season on record. 
+      Interestingly, the total number of fires in South Africa was lower than 2023, but the ones that did occur were far more destructive. 
+      That shows how intensity matters as much as counts. 
+      The southern season wasn’t just routine veld burning — it turned into a wildfire crisis.
+    `,
+    month: 9
+  }
+};
+
+// function renderPanel(chapterId) {
+//   const c = CHAPTERS[chapterId];
+//   if (!c) return;
+
+//   document.getElementById("panel-title").textContent = c.title;
+//   document.getElementById("panel-content").innerHTML = c.text;
+
+//   // Switch map month
+//   activeMonth = c.month;
+//   monthSlider.value = activeMonth;
+//   document.getElementById("month-label").innerText =
+//     "Month: " + monthNames[activeMonth - 1] + " 2024";
+//   drawMap();
+// }
+
+function renderPanel(chapterId) {
+  const c = CHAPTERS[chapterId];
+  if (!c) return;
+
+  document.getElementById("panel-title").textContent = c.title;
+  document.getElementById("panel-content").innerHTML = c.text;
+
+  // Show or hide the hook paragraph
+  const hookEl = document.getElementById("panel-hook");
+  if (chapterId === 0) {
+    hookEl.style.display = "block";
+  } else {
+    hookEl.style.display = "none";
+  }
+
+  // Switch map month
+  activeMonth = c.month;
+  monthSlider.value = activeMonth;
+  document.getElementById("month-label").innerText =
+    "Month: " + monthNames[activeMonth - 1] + " 2024";
+  drawMap();
+}
+
+
 // ----------------- REGION FRP TOGGLE BUTTON -----------------
 (function createRegionToggle() {
   if (document.getElementById("frp-region-toggle")) return;
@@ -204,16 +286,23 @@ function hideTooltip() {
 // ------------------------------------------------------------
 
 // ------------------------ MAP DRAW --------------------------
+
 function drawMap() {
-  const width  = window.innerWidth;
+  const panelWidth = document.getElementById("panel")?.clientWidth || 0;
+  const width  = window.innerWidth - panelWidth;
   const height = window.innerHeight;
 
-  // Resize SVG + canvas to viewport
   svg.attr("width", width).attr("height", height);
-  canvas.width  = width  * window.devicePixelRatio;
-  canvas.height = height * window.devicePixelRatio;
-  ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
-  ctx.clearRect(0, 0, width, height);
+  svg.node().style.width  = width + "px";
+  svg.node().style.height = height + "px";
+
+  canvas.width  = width;
+  canvas.height = height;
+  canvas.style.width  = width + "px";
+  canvas.style.height = height + "px";
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // keep 1:1 coordinate space
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const rows = allData["Africa"] || [];
   const filteredData = rows.filter(d => {
@@ -354,3 +443,17 @@ loadAfricaData()
   .catch(err => console.error("LOAD ERROR:", err));
 
 window.addEventListener("resize", drawMap);
+// ------------------------------------------------------------
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Default view (hook text)
+  renderPanel(0);
+
+  // Chapter button handlers
+  document.querySelectorAll(".chapter-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = +btn.dataset.chapter;
+      renderPanel(id);
+    });
+  });
+});

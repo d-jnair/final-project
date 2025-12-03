@@ -8,6 +8,15 @@
   <script src="https://unpkg.com/topojson-client@3"></script>
 </head>
 <body>
+  
+  <select id="continent-selector" onchange="filterMap(this.value)">
+    <option value="Africa">Africa</option>
+    <option value="North America">North America</option>
+    <option value="South America">South America</option>
+    <option value="Asia">Asia</option>
+    <option value="Oceania">Oceania</option>
+    <option value="Europe">Europe</option>
+  </select>
 
   <div id="month-slider-container">
   <label for="month-slider" id="month-label">Month: January 2024</label>
@@ -15,6 +24,25 @@
     <input type="range" id="month-slider" min="1" max="12" value="1">
     <button id="play-btn">▶️</button>
     <button id="reset-btn">⏹️</button>
+  </div>
+</div>
+
+<!-- Right-side narrative panel -->
+<div id="panel">
+  <div id="panel-header">
+    <h2 id="panel-title">Africa Wildfires 2024: From Savanna Cycles to Fire Crises</h2>
+    <p id="panel-hook">Africa burns every year—mostly savannas in dry seasons, often human-set for land management. In 2024, the pattern shifted: record burning in the Congo Basin and a deadly wildfire crisis in South Africa suggest a change in Africa’s fire regime.</p>
+  </div>
+
+
+  <div id="panel-controls">
+    <button class="chapter-btn" data-chapter="1">Chapter 1: Jan–Mar</button>
+    <button class="chapter-btn" data-chapter="2">Chapter 2: Jul–Aug</button>
+    <button class="chapter-btn" data-chapter="3">Chapter 3: Sep–Dec</button>
+  </div>
+
+  <div id="panel-content">
+    <!-- Chapter content will render here -->
   </div>
 </div>
 
