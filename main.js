@@ -240,6 +240,7 @@ function drawFireDots(data) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "rgba(255, 69, 0, 0.6)";
 
+
   data.forEach(d => {
     const [x, y] = projection([+d.longitude, +d.latitude]);
     if (!isNaN(x) && !isNaN(y)) {
