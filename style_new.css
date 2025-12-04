@@ -1,0 +1,92 @@
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: #fffdf9;
+  color: #333;
+}
+
+/* Intro frames */
+.intro {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  background: #fffdf9;
+  text-align: center;
+}
+.intro h1 {
+  font-size: 40px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.intro p {
+  font-size: 20px;
+  line-height: 1.6;
+  max-width: 800px;
+}
+.arrow {
+  font-size: 40px;
+  color: #ff4500;
+  margin-top: 20px;
+}
+
+/* Scrollytelling layout */
+#map, #dots {
+  display: none; /* hidden until scrolly is active */
+}
+
+#scrolly.active #map,
+#scrolly.active #dots {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 64vw;
+  height: 100vh;
+}
+#dots { z-index: 10; }
+
+#scrolly.active #sections {
+  margin-left: 64vw;
+}
+
+#sections {
+  max-width: 720px;
+  padding: 40px 28px 100px;
+}
+
+#sections section {
+  margin: 0 auto 80px;
+  padding: 40px 32px;
+  border-left: 3px solid #eee;
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  transition: all 0.3s ease;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+#sections section.is-active {
+  border-color: #ff4500;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+#sections h2 {
+  font-size: 26px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+#sections h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+#sections p {
+  font-size: 18px;
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
