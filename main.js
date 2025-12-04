@@ -93,6 +93,7 @@ const CHAPTERS = {
       What stands out in 2024 is that the clusters are larger than the year before. 
       That hints at an upward trend – more fires, and possibly stronger ones – even in regions where burning is routine.
     `,
+    image: "images/ch1_barchart.png",
     month: 1
   },
   2: {
@@ -103,6 +104,7 @@ const CHAPTERS = {
       Climate change likely made those extremes more frequent. 
       So instead of just savanna burning, we see fire chewing into wetter forest zones – a warning sign that Africa’s fire regime is intensifying.
     `,
+    image: "images/ch2_barchart.png",
     month: 7
   },
   3: {
@@ -114,6 +116,7 @@ const CHAPTERS = {
       That shows how intensity matters as much as counts. 
       The southern season wasn’t just routine veld burning — it turned into a wildfire crisis.
     `,
+    image: "images/ch3_barchart.png",
     month: 9
   }
 };
@@ -137,22 +140,39 @@ function renderPanel(chapterId) {
   const c = CHAPTERS[chapterId];
   if (!c) return;
 
+  // Update panel title
   document.getElementById("panel-title").textContent = c.title;
-  document.getElementById("panel-content").innerHTML = c.text;
+
+  // Get the content container
+  const panelContent = document.getElementById("panel-content");
+  panelContent.innerHTML = ""; // clear existing content
+
+  // Add image if available
+  if (c.image) {
+    const img = document.createElement("img");
+    img.src = c.image;
+    img.alt = c.title;
+    img.style.width = "100%"; // full width
+    img.style.borderRadius = "8px";
+    img.style.marginBottom = "12px";
+    panelContent.appendChild(img);
+  }
+
+  // Add chapter text
+  const textDiv = document.createElement("div");
+  textDiv.innerHTML = c.text;
+  panelContent.appendChild(textDiv);
 
   // Show or hide the hook paragraph
   const hookEl = document.getElementById("panel-hook");
-  if (chapterId === 0) {
-    hookEl.style.display = "block";
-  } else {
-    hookEl.style.display = "none";
-  }
+  hookEl.style.display = chapterId === 0 ? "block" : "none";
 
   // Switch map month
   activeMonth = c.month;
   monthSlider.value = activeMonth;
   document.getElementById("month-label").innerText =
     "Month: " + monthNames[activeMonth - 1] + " 2024";
+
   drawMap();
 }
 
