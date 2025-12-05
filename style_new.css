@@ -37,10 +37,54 @@ body {
   display: none; /* hidden until scrolly is active */
 }
 
-#scrolly.active #map,
+/* Scrollytelling layout */
+#map,
+#dots {
+  display: none; /* hidden until scrolly is active */
+}
+
+/* Scrolly container */
+#scrolly {
+  position: relative;
+}
+
+/* Map: sticks in the left column while we’re in the scrolly section */
+#scrolly.active #map {
+  display: block;
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 64vw;
+  height: 100vh;
+  z-index: 1;
+}
+
+/* Dots: fixed overlay, same size/position as the map, but only
+   visible when we add .is-visible via JS */
+#dots {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 64vw;
+  height: 100vh;
+  z-index: 2;
+  pointer-events: none;
+}
+
+#dots.is-visible {
+  display: block;
+}
+
+/* Text column shifts right once scrolly is active */
+#scrolly.active #sections {
+  margin-left: 64vw;
+  margin-top: 5vw;
+}
+
+/* #scrolly.active #map,
 #scrolly.active #dots {
   display: block;
-  position: fixed;
+  position: sticky;
   top: 0;
   left: 0;
   width: 64vw;
@@ -50,7 +94,7 @@ body {
 
 #scrolly.active #sections {
   margin-left: 64vw;
-}
+} */
 
 #sections {
   max-width: 720px;
@@ -90,3 +134,4 @@ body {
   line-height: 1.7;
   margin-bottom: 16px;
 }
+
