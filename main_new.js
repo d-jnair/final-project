@@ -38,6 +38,14 @@ const COUNTRY_NAME_FIX = {
   "Côte d'Ivoire": "Cote d Ivoire"
 };
 
+const chartPanels = {
+  "1":  { svg: "#chart1", countries: ["South Sudan", "Nigeria", "Guinea", "Sierra Leone"] },
+  "2":  { svg: "#chart2", countries: ["DRC", "Angola", "Congo", "Malawi"] },
+  "3":  { svg: "#chart3", countries: ["Congo"] },
+  "4":  { svg: "#chart4", countries: ["Angola", "Zambia", "Mozambique", "South Africa"] },
+  "5":  { svg: "#chart5", countries: ["South Africa"] }
+};
+
 let allData = {};             // allData["Africa"] = flat array of rows
 let activeMonth = 1;          // month to show
 let showRegionFRP = false;    // FRP choropleth toggle
@@ -332,6 +340,134 @@ window.addEventListener("resize", () => {
   observer.observe(scrollyEl);
 })();
 
+//=================== BAR GRAPHS =====================
+createBarChart({
+  element: "#chart1",
+  data: CHART_DATA.chart1,
+  title: "Fire Counts 2023 vs 2024",
+});
+
+function createBarChart({ element, data, height = 320 }) {
+
+  const svg = d3.select(element);
+  svg.selectAll("*").remove();
+
+  const width = svg.node().parentNode.clientWidth;
+  svg.attr("width", width).attr("height", height);
+
+  const margin = { top: 60, right: 40, bottom: 50, left: 60 };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  const isSingleCountryChart = data.length === 1;
+
+  const g = svg.append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // Scales
+  const x0 = d3.scaleBand()
+      .range([0, innerWidth])
+      .padding(0.3)
+      .domain(data.map(d => d.country));
+
+  const x1 = d3.scaleBand()
+      .padding(0.15)
+      .domain(["y2023", "y2024"])
+      .range([0, x0.bandwidth()]);
+
+  const yMax = d3.max(data, d => Math.max(d.y2023, d.y2024));
+  const y = d3.scaleLinear()
+      .domain([0, yMax])
+      .range([innerHeight, 0])
+      .nice();
+
+  const color = d3.scaleOrdinal()
+      .domain(["y2023", "y2024"])
+      .range(["#f5a27a", "#e44d26"]);
+
+  // Axes
+  g.append("g")
+      .attr("transform", `translate(0,${innerHeight})`)
+      .call(d3.axisBottom(x0));
+
+  g.append("g")
+      .call(d3.axisLeft(y).ticks(6));
+
+  g.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 0 - margin.left)
+      .attr("x", 0 - (innerHeight / 2))
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .style("font-size", "14px")
+      .style("font-weight", "600")
+      .text("Fire Count");
+
+  // Bars and Animation
+  const groups = g.selectAll(".bar-group")
+      .data(data)
+      .enter()
+      .append("g")
+      .attr("transform", d => `translate(${x0(d.country)},0)`);
+
+  groups.selectAll("rect")
+      .data(d => ["y2023", "y2024"].map(key => ({ key, value: d[key], country: d.country })))
+      .enter()
+      .append("rect")
+      .attr("x", d => x1(d.key))
+      .attr("y", innerHeight)
+      .attr("width", x1.bandwidth())
+      .attr("height", 0)
+      .attr("fill", d => color(d.key))
+      .transition()
+      .duration(1100)
+      .delay((d,i) => i * 200)
+      .attr("y", d => y(d.value))
+      .attr("height", d => innerHeight - y(d.value));
+
+  // % Change Labels
+  const labelXPosition = isSingleCountryChart 
+  ? x1("y2023") + x1.bandwidth() / 2 
+  : x0.bandwidth() / 2;
+
+// Append text to the country groups (runs once per country)
+groups.append("text")
+    .text(d => {
+      // Calculate percentage change using the country's data (d)
+      const pct = ((d.y2024 - d.y2023) / d.y2023) * 100;
+      return pct >= 0 ? `↑ ${pct.toFixed(1)}%` : `↓ ${pct.toFixed(1)}%`;
+    })
+    .attr("x", labelXPosition) // Using conditional X position
+    .attr("y", d => y(Math.max(d.y2023, d.y2024)) - 15)
+    .attr("fill", d => ((d.y2024 - d.y2023) >= 0) ? "#d50c00" : "#0077cc")
+    .attr("font-size", "18px")
+    .attr("font-weight", "700")
+    .attr("text-anchor", "middle")
+    .style("opacity", 0)
+    .transition()
+    .delay(1200)
+    .duration(800)
+    .style("opacity", 1);
+
+  // Legend
+  const legend = svg.append("g")
+      .attr("transform", `translate(${width - 140}, 10)`);
+
+  ["2023","2024"].forEach((year,i) => {
+    legend.append("rect")
+      .attr("x", 0)
+      .attr("y", i*22)
+      .attr("width", 16)
+      .attr("height", 16)
+      .attr("fill", year === "2023" ? "#f5a27a" : "#e44d26");
+
+    legend.append("text")
+      .attr("x", 24)
+      .attr("y", i*22 + 13)
+      .text(year)
+      .attr("font-size", "14px");
+  });
+}
 
 // ================== SCROLLY LOGIC ==================
 const scrolly = document.getElementById("scrolly");
@@ -392,17 +528,37 @@ if (scrolly) {
     if (scrolly.classList.contains('active')) {
       drawMap();
     }
+
+    if (chartPanels[chapterKey]) {
+      // Chapter 1: only chart1 is rendered inside section 1
+      if (chapterKey === "1") {
+        createBarChart({ element: "#chart1", data: CHART_DATA.chart1 });
+      }
+      // Chapter 2: chart2 and chart3 are rendered inside section 2
+      if (chapterKey === "2") {
+        createBarChart({ element: "#chart2", data: CHART_DATA.chart2 });
+        createBarChart({ element: "#chart3", data: CHART_DATA.chart3 });
+      }
+      // Chapter 3: chart4 and chart5 are rendered inside section 3
+      if (chapterKey === "3") {
+        createBarChart({ element: "#chart4", data: CHART_DATA.chart4 });
+        createBarChart({ element: "#chart5", data: CHART_DATA.chart5 });
+      }
+    }
   };
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
-      if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+      if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
         activateSection(entry.target);
       }
     });
   }, {
-    threshold: [0.6, 0.8]
+    threshold: 0.3
   });
 
   sections.forEach(s => observer.observe(s));
 })();
+
+
+

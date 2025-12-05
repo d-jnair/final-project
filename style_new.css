@@ -99,6 +99,8 @@ body {
 #sections {
   max-width: 720px;
   padding: 40px 28px 100px;
+  width: 35%; /* The text column takes up 35% of the screen */
+  flex-grow: 1
 }
 
 #sections section {
@@ -134,4 +136,12 @@ body {
   line-height: 1.7;
   margin-bottom: 16px;
 }
+
+.chart-container {
+    width: 100%; 
+    max-width: 500px; 
+    margin: 20px auto;
+}
+
+
 
