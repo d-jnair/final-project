@@ -507,21 +507,28 @@ if (scrolly) {
     // Set month by chapter
     switch (chapterKey) {
       case "1":
+      case "1-compare":
         activeMonth = 1;   // early-year
         break;
+
       case "2":
-        activeMonth = 7;   // peak season
+      case "2-compare":
+      case "2-congo":
+        activeMonth = 7;   // Congo mid-year
         break;
+
       case "3":
-        activeMonth = 9;   // late dry season
+      case "3-southafrica":
+        activeMonth = 9;   // southern peak
         break;
+
       case "4":
-        activeMonth = 11;  // year-end
+        activeMonth = 11;  // year-end return
         break;
+
       case "conclusion":
-        // keep last month
-        break;
       default:
+        // keep last month
         break;
     }
 
@@ -529,21 +536,24 @@ if (scrolly) {
       drawMap();
     }
 
-    if (chartPanels[chapterKey]) {
-      // Chapter 1: only chart1 is rendered inside section 1
-      if (chapterKey === "1") {
-        createBarChart({ element: "#chart1", data: CHART_DATA.chart1 });
-      }
-      // Chapter 2: chart2 and chart3 are rendered inside section 2
-      if (chapterKey === "2") {
-        createBarChart({ element: "#chart2", data: CHART_DATA.chart2 });
-        createBarChart({ element: "#chart3", data: CHART_DATA.chart3 });
-      }
-      // Chapter 3: chart4 and chart5 are rendered inside section 3
-      if (chapterKey === "3") {
-        createBarChart({ element: "#chart4", data: CHART_DATA.chart4 });
-        createBarChart({ element: "#chart5", data: CHART_DATA.chart5 });
-      }
+    if (chapterKey === "1-compare") {
+      createBarChart({ element: "#chart1", data: CHART_DATA.chart1 });
+    }
+
+    if (chapterKey === "2-compare") {
+      createBarChart({ element: "#chart2", data: CHART_DATA.chart2 });
+    }
+
+    if (chapterKey === "2-congo") {
+      createBarChart({ element: "#chart3", data: CHART_DATA.chart3 });
+    }
+
+    if (chapterKey === "3") {
+      createBarChart({ element: "#chart4", data: CHART_DATA.chart4 });
+    }
+
+    if (chapterKey === "3-southafrica") {
+      createBarChart({ element: "#chart5", data: CHART_DATA.chart5 });
     }
   };
 
