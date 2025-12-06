@@ -46,9 +46,9 @@ const chartPanels = {
   "5":  { svg: "#chart5", countries: ["South Africa"] }
 };
 
-let allData = {};             // allData["Africa"] = flat array of rows
-let activeMonth = 1;          // month to show
-let showRegionFRP = false;    // FRP choropleth toggle
+let allData = {};
+let activeMonth = 1;
+let showRegionFRP = false;
 let africaFeatures = null;
 let hasDrawnMapOnce = false;
 
@@ -58,13 +58,13 @@ function drawFireDots(data) {
   if (!projection) return;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "rgba(255, 69, 0, 0.6)";
+  ctx.fillStyle = "rgba(255, 120, 40, 0.7)";
 
   data.forEach(d => {
     const [x, y] = projection([+d.longitude, +d.latitude]);
     if (!isNaN(x) && !isNaN(y)) {
       ctx.beginPath();
-      ctx.arc(x, y, 2, 0, Math.PI * 2);
+      ctx.arc(x, y, 2.1, 0, Math.PI * 2);
       ctx.fill();
     }
   });
@@ -75,14 +75,15 @@ if (!window.fireTooltip) {
   window.fireTooltip = d3.select("body").append("div")
     .attr("class", "fire-tooltip")
     .style("position", "absolute")
-    .style("background", "rgba(255,255,255,0.95)")
-    .style("border", "1px solid #333")
+    .style("background", "rgba(10,10,18,0.9)")
+    .style("border", "1px solid rgba(255,255,255,0.18)")
     .style("padding", "8px 12px")
     .style("border-radius", "7px")
     .style("pointer-events", "none")
-    .style("font-size", "14px")
+    .style("font-size", "13px")
+    .style("color", "#f7f7f9")
     .style("z-index", "9999")
-    .style("box-shadow", "0 2px 8px rgba(0,0,0,0.2)")
+    .style("box-shadow", "0 14px 35px rgba(0,0,0,0.6)")
     .style("opacity", 0);
 }
 
@@ -110,13 +111,11 @@ window.addEventListener("scroll", () => {
 // ------------------------ MAP DRAW --------------------------
 function drawMap() {
   const scrolly = document.getElementById('scrolly');
-  // Only draw if scrolly is active (after Chapter 1 shows)
   if (!scrolly || !scrolly.classList.contains('active')) return;
-  if (!africaFeatures || !allData["Africa"]) return; // wait until data + topo cached
+  if (!africaFeatures || !allData["Africa"]) return;
 
-  // Width = 64vw (same as CSS in style_new.css), height = full viewport
   const width  = Math.max(window.innerWidth * 0.64, 400);
-  const height = window.innerHeight;
+  const height = window.innerWidth <= 1024 ? window.innerHeight * 0.55 : window.innerHeight;
 
   svg.attr("width", width).attr("height", height);
   svg.node().style.width  = width + "px";
@@ -136,7 +135,6 @@ function drawMap() {
     return month === activeMonth;
   });
 
-  // Aggregate by country for FRP choropleth
   const countryStats = new Map();
   filteredData.forEach(row => {
     const csvName = row.country;
@@ -169,19 +167,36 @@ function drawMap() {
   }
 
   function getRegionFill(topoName) {
-    if (!showRegionFRP || !regionColorScale) return "#ddd"; // toggle off = neutral
+    if (!showRegionFRP || !regionColorScale) return "#202435";
     const csvName = COUNTRY_NAME_FIX[topoName] || topoName;
     const s = countryStats.get(csvName);
-    if (!s || !isFinite(s.meanFRP)) return "#eee";
+    if (!s || !isFinite(s.meanFRP)) return "#141725";
     return regionColorScale(s.meanFRP);
   }
 
-  // Build projection using cached africaFeatures
   const collection = { type: "FeatureCollection", features: africaFeatures };
   const projection = d3.geoMercator().fitSize([width, height], collection);
   const path = d3.geoPath().projection(projection);
 
   svg.selectAll("*").remove();
+
+  // subtle ocean background
+  svg.append("rect")
+    .attr("x", -20)
+    .attr("y", -20)
+    .attr("width", width + 40)
+    .attr("height", height + 40)
+    .attr("fill", "url(#oceanGradient)");
+
+  const defs = svg.append("defs");
+  const oceanGrad = defs.append("linearGradient")
+    .attr("id", "oceanGradient")
+    .attr("x1", "0%")
+    .attr("y1", "0%")
+    .attr("x2", "100%")
+    .attr("y2", "100%");
+  oceanGrad.append("stop").attr("offset", "0%").attr("stop-color", "#020617");
+  oceanGrad.append("stop").attr("offset", "100%").attr("stop-color", "#020926");
 
   svg.append("g")
     .attr("id", "continent-layer")
@@ -191,8 +206,8 @@ function drawMap() {
     .append("path")
     .attr("d", path)
     .attr("fill", d => getRegionFill(d.properties.name))
-    .attr("stroke", "#333")
-    .attr("stroke-width", 0.6)
+    .attr("stroke", "#2f364c")
+    .attr("stroke-width", 0.65)
     .on("mouseover", function (event, d) {
       const countryName = d.properties.name;
       const csvCountryName = COUNTRY_NAME_FIX[countryName] || countryName;
@@ -217,22 +232,29 @@ function drawMap() {
         : "N/A";
 
       const html = `<strong>${csvCountryName}</strong><br>
-        Fires: ${fireCount}<br>
+        Fires: ${fireCount.toLocaleString()}<br>
         Mean FRP: ${meanFRP}<br>
         Mean Brightness: ${meanBright}<br>
         % of Continent Fires: ${prop}%`;
 
       showTooltip(event, html);
-      d3.select(this).attr("fill", "rgba(170, 203, 255, 1)");
+      d3.select(this)
+        .attr("stroke-width", 1.2)
+        .attr("stroke", "#facc6b")
+        .attr("fill", "rgba(170, 203, 255, 0.95)");
     })
     .on("mousemove", moveTooltip)
     .on("mouseout", function (event, d) {
       hideTooltip();
-      d3.select(this).attr("fill", getRegionFill(d.properties.name));
+      d3.select(this)
+        .attr("stroke-width", 0.65)
+        .attr("stroke", "#2f364c")
+        .attr("fill", getRegionFill(d.properties.name));
     });
 
   window.currentProjection = projection;
   drawFireDots(filteredData);
+
   const dotsEl = document.getElementById('dots');
   if (dotsEl && !hasDrawnMapOnce) {
     dotsEl.classList.add('is-visible');
@@ -254,7 +276,6 @@ function loadAfricaData() {
   )).then(dfs => dfs.flat());
 }
 
-// Cache topojson once
 function loadAfricaTopo() {
   if (africaFeatures) return Promise.resolve(africaFeatures);
   return d3.json("https://unpkg.com/world-atlas@2/countries-50m.json")
@@ -267,13 +288,12 @@ function loadAfricaTopo() {
     });
 }
 
-// Load data + topo in parallel
 Promise.all([loadAfricaData(), loadAfricaTopo()])
   .then(([data, features]) => {
     allData["Africa"] = data;
     console.log("Africa fire points loaded:", data.length);
     console.log("Africa topo features:", features.length);
-    drawMap(); // safe: will no-op until scrolly is active
+    drawMap();
   })
   .catch(err => console.error("LOAD ERROR:", err));
 
@@ -291,19 +311,23 @@ window.addEventListener("resize", () => {
   btn.id = "frp-region-toggle";
   btn.textContent = "Region FRP: off";
 
-  // Fixed bottom-left of the screen
   btn.style.position = "fixed";
   btn.style.bottom = "20px";
   btn.style.left = "20px";
   btn.style.zIndex = 9999;
-  btn.style.padding = "6px 10px";
-  btn.style.borderRadius = "6px";
-  btn.style.border = "1px solid #444";
-  btn.style.background = "rgba(255,255,255,0.9)";
+  btn.style.padding = "7px 14px";
+  btn.style.borderRadius = "999px";
+  btn.style.border = "1px solid rgba(255,255,255,0.22)";
+  btn.style.background = "rgba(7,10,21,0.88)";
   btn.style.cursor = "pointer";
-  btn.style.fontSize = "12px";
+  btn.style.fontSize = "11px";
+  btn.style.color = "#f9fafb";
+  btn.style.letterSpacing = "0.09em";
+  btn.style.textTransform = "uppercase";
+  btn.style.backdropFilter = "blur(14px)";
+  btn.style.boxShadow = "0 14px 35px rgba(0,0,0,0.75)";
+  btn.style.position = "fixed";
 
-  // Start hidden
   btn.style.display = "none";
 
   document.body.appendChild(btn);
@@ -318,17 +342,13 @@ window.addEventListener("resize", () => {
   const dotsEl = document.getElementById('dots');
   if (!scrollyEl) return;
 
-  // Show/hide button and dots based on whether scrolly is on screen
-    const observer = new IntersectionObserver(entries => {
+  const observer = new IntersectionObserver(entries => {
     entries.forEach(entry => {
       const visible = entry.isIntersecting && scrollyEl.classList.contains('active');
-
-      // button only depends on scrolly visibility + active
       btn.style.display = visible ? "block" : "none";
 
       if (!dotsEl) return;
 
-      // dots also require the map to have drawn at least once
       if (visible && hasDrawnMapOnce) {
         dotsEl.classList.add("is-visible");
       } else {
@@ -344,7 +364,7 @@ window.addEventListener("resize", () => {
 createBarChart({
   element: "#chart1",
   data: CHART_DATA.chart1,
-  title: "Fire Counts 2023 vs 2024",
+  title: "Fire Counts 2023 vs 2024"
 });
 
 function createBarChart({ element, data, height = 320 }) {
@@ -355,7 +375,7 @@ function createBarChart({ element, data, height = 320 }) {
   const width = svg.node().parentNode.clientWidth;
   svg.attr("width", width).attr("height", height);
 
-  const margin = { top: 60, right: 40, bottom: 50, left: 60 };
+  const margin = { top: 50, right: 40, bottom: 50, left: 60 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
@@ -364,14 +384,13 @@ function createBarChart({ element, data, height = 320 }) {
   const g = svg.append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // Scales
   const x0 = d3.scaleBand()
       .range([0, innerWidth])
       .padding(0.3)
       .domain(data.map(d => d.country));
 
   const x1 = d3.scaleBand()
-      .padding(0.15)
+      .padding(0.18)
       .domain(["y2023", "y2024"])
       .range([0, x0.bandwidth()]);
 
@@ -383,75 +402,121 @@ function createBarChart({ element, data, height = 320 }) {
 
   const color = d3.scaleOrdinal()
       .domain(["y2023", "y2024"])
-      .range(["#f5a27a", "#e44d26"]);
+      .range(["#f97316", "#fb3c3c"]);
 
-  // Axes
-  g.append("g")
+  const xAxis = g.append("g")
       .attr("transform", `translate(0,${innerHeight})`)
-      .call(d3.axisBottom(x0));
+      .call(d3.axisBottom(x0))
+      .attr("font-size", 12)
+      .attr("color", "#e5e7eb");
 
-  g.append("g")
-      .call(d3.axisLeft(y).ticks(6));
+  xAxis.selectAll("path,line").attr("stroke", "#4b5563");
+
+  const yAxis = g.append("g")
+      .call(d3.axisLeft(y).ticks(6))
+      .attr("font-size", 11)
+      .attr("color", "#e5e7eb");
+
+  yAxis.selectAll("path,line").attr("stroke", "#4b5563");
 
   g.append("text")
       .attr("transform", "rotate(-90)")
-      .attr("y", 0 - margin.left)
+      .attr("y", 0 - margin.left + 10)
       .attr("x", 0 - (innerHeight / 2))
-      .attr("dy", "1em")
+      .attr("dy", "0.7em")
       .style("text-anchor", "middle")
-      .style("font-size", "14px")
+      .style("font-size", "13px")
+      .style("fill", "#e5e7eb")
       .style("font-weight", "600")
       .text("Fire Count");
 
-  // Bars and Animation
+  // Background horizontal grid
+  g.append("g")
+    .attr("class", "grid")
+    .call(
+      d3.axisLeft(y)
+        .tickSize(-innerWidth)
+        .tickFormat("")
+    )
+    .selectAll("line")
+    .attr("stroke", "rgba(148, 163, 184, 0.25)")
+    .attr("stroke-dasharray", "3,3");
+
   const groups = g.selectAll(".bar-group")
       .data(data)
       .enter()
       .append("g")
+      .attr("class", "bar-group")
       .attr("transform", d => `translate(${x0(d.country)},0)`);
 
-  groups.selectAll("rect")
+  const bars = groups.selectAll("rect")
       .data(d => ["y2023", "y2024"].map(key => ({ key, value: d[key], country: d.country })))
       .enter()
       .append("rect")
       .attr("x", d => x1(d.key))
       .attr("y", innerHeight)
+      .attr("rx", 5)
+      .attr("ry", 5)
       .attr("width", x1.bandwidth())
       .attr("height", 0)
       .attr("fill", d => color(d.key))
+      .attr("opacity", 0.9)
+      .on("mouseover", function(event, d) {
+        const year = d.key === "y2023" ? 2023 : 2024;
+        const datumForCountry = data.find(row => row.country === d.country);
+        const pctChange = ((datumForCountry.y2024 - datumForCountry.y2023) / datumForCountry.y2023) * 100;
+
+        showTooltip(
+          event,
+          `<strong>${d.country}</strong><br>` +
+          `Year: ${year}<br>` +
+          `Fire Count: ${d.value.toLocaleString()}<br>` +
+          `Change 2023→2024: ${
+            pctChange >= 0 ? "▲ " : "▼ "
+          }${pctChange.toFixed(1)}%`
+        );
+
+        d3.select(this)
+          .attr("opacity", 1)
+          .attr("stroke", "#facc6b")
+          .attr("stroke-width", 1.2);
+      })
+      .on("mousemove", moveTooltip)
+      .on("mouseout", function() {
+        hideTooltip();
+        d3.select(this)
+          .attr("opacity", 0.9)
+          .attr("stroke-width", 0);
+      })
       .transition()
-      .duration(1100)
-      .delay((d,i) => i * 200)
+      .duration(900)
+      .delay((d, i) => i * 160)
       .attr("y", d => y(d.value))
       .attr("height", d => innerHeight - y(d.value));
 
-  // % Change Labels
   const labelXPosition = isSingleCountryChart 
-  ? x1("y2023") + x1.bandwidth() / 2 
-  : x0.bandwidth() / 2;
+    ? x1("y2023") + x1.bandwidth() / 2 
+    : x0.bandwidth() / 2;
 
-// Append text to the country groups (runs once per country)
-groups.append("text")
+  groups.append("text")
     .text(d => {
-      // Calculate percentage change using the country's data (d)
       const pct = ((d.y2024 - d.y2023) / d.y2023) * 100;
-      return pct >= 0 ? `↑ ${pct.toFixed(1)}%` : `↓ ${pct.toFixed(1)}%`;
+      return (pct >= 0 ? "↑ " : "↓ ") + Math.abs(pct).toFixed(1) + "%";
     })
-    .attr("x", labelXPosition) // Using conditional X position
-    .attr("y", d => y(Math.max(d.y2023, d.y2024)) - 15)
-    .attr("fill", d => ((d.y2024 - d.y2023) >= 0) ? "#d50c00" : "#0077cc")
-    .attr("font-size", "18px")
+    .attr("x", labelXPosition)
+    .attr("y", d => y(Math.max(d.y2023, d.y2024)) - 12)
+    .attr("fill", d => ((d.y2024 - d.y2023) >= 0) ? "#fecaca" : "#bfdbfe")
+    .attr("font-size", "14px")
     .attr("font-weight", "700")
     .attr("text-anchor", "middle")
     .style("opacity", 0)
     .transition()
-    .delay(1200)
-    .duration(800)
+    .delay(1050)
+    .duration(700)
     .style("opacity", 1);
 
-  // Legend
   const legend = svg.append("g")
-      .attr("transform", `translate(${width - 140}, 10)`);
+      .attr("transform", `translate(${width - 150}, 14)`);
 
   ["2023","2024"].forEach((year,i) => {
     legend.append("rect")
@@ -459,30 +524,32 @@ groups.append("text")
       .attr("y", i*22)
       .attr("width", 16)
       .attr("height", 16)
-      .attr("fill", year === "2023" ? "#f5a27a" : "#e44d26");
+      .attr("rx", 4)
+      .attr("ry", 4)
+      .attr("fill", year === "2023" ? "#f97316" : "#fb3c3c");
 
     legend.append("text")
       .attr("x", 24)
       .attr("y", i*22 + 13)
       .text(year)
-      .attr("font-size", "14px");
+      .attr("font-size", 13)
+      .attr("fill", "#e5e7eb");
   });
 }
 
 // ================== SCROLLY LOGIC ==================
 const scrolly = document.getElementById("scrolly");
 
-// Turn the scrolly layout (map + text) on as soon as #scrolly enters the viewport
 if (scrolly) {
   const scrollyObserver = new IntersectionObserver(entries => {
     entries.forEach(entry => {
       if (entry.isIntersecting && !scrolly.classList.contains('active')) {
         scrolly.classList.add('active');
-        activeMonth = 1;  // start with Chapter 1 month
+        activeMonth = 1;
         drawMap();
       }
     });
-  }, { threshold: 1 }); // trigger as soon as #scrolly starts to appear
+  }, { threshold: 1 });
 
   scrollyObserver.observe(scrolly);
 }
@@ -498,37 +565,30 @@ if (scrolly) {
     const chapterKey = el.dataset.chapter;
     console.log("Active section:", chapterKey);
 
-    // Turn the map on the moment Chapter 1 first comes into view
     if (chapterKey === '1' && !scrolly.classList.contains('active')) {
       scrolly.classList.add('active');
       drawMap();
     }
 
-    // Set month by chapter
     switch (chapterKey) {
       case "1":
       case "1-compare":
-        activeMonth = 1;   // early-year
+        activeMonth = 1;
         break;
-
       case "2":
       case "2-compare":
       case "2-congo":
-        activeMonth = 7;   // Congo mid-year
+        activeMonth = 7;
         break;
-
       case "3":
       case "3-southafrica":
-        activeMonth = 9;   // southern peak
+        activeMonth = 9;
         break;
-
       case "4":
-        activeMonth = 11;  // year-end return
+        activeMonth = 11;
         break;
-
       case "conclusion":
       default:
-        // keep last month
         break;
     }
 
@@ -539,19 +599,15 @@ if (scrolly) {
     if (chapterKey === "1-compare") {
       createBarChart({ element: "#chart1", data: CHART_DATA.chart1 });
     }
-
     if (chapterKey === "2-compare") {
       createBarChart({ element: "#chart2", data: CHART_DATA.chart2 });
     }
-
     if (chapterKey === "2-congo") {
       createBarChart({ element: "#chart3", data: CHART_DATA.chart3 });
     }
-
     if (chapterKey === "3") {
       createBarChart({ element: "#chart4", data: CHART_DATA.chart4 });
     }
-
     if (chapterKey === "3-southafrica") {
       createBarChart({ element: "#chart5", data: CHART_DATA.chart5 });
     }
@@ -569,6 +625,3 @@ if (scrolly) {
 
   sections.forEach(s => observer.observe(s));
 })();
-
-
-
