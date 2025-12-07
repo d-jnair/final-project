@@ -58,7 +58,11 @@ function drawFireDots(data) {
   if (!projection) return;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "rgba(255, 120, 40, 0.7)";
+
+  // Make dots pop more when FRP choropleth is on
+  ctx.fillStyle = showRegionFRP
+    ? "rgba(56, 189, 248, 0.85)"   // cyan when FRP layer on
+    : "rgba(255, 120, 40, 0.7)";   // warm orange when off
 
   data.forEach(d => {
     const [x, y] = projection([+d.longitude, +d.latitude]);
@@ -180,14 +184,6 @@ function drawMap() {
 
   svg.selectAll("*").remove();
 
-  // subtle ocean background
-  svg.append("rect")
-    .attr("x", -20)
-    .attr("y", -20)
-    .attr("width", width + 40)
-    .attr("height", height + 40)
-    .attr("fill", "url(#oceanGradient)");
-
   const defs = svg.append("defs");
   const oceanGrad = defs.append("linearGradient")
     .attr("id", "oceanGradient")
@@ -197,6 +193,13 @@ function drawMap() {
     .attr("y2", "100%");
   oceanGrad.append("stop").attr("offset", "0%").attr("stop-color", "#020617");
   oceanGrad.append("stop").attr("offset", "100%").attr("stop-color", "#020926");
+
+  svg.append("rect")
+    .attr("x", -20)
+    .attr("y", -20)
+    .attr("width", width + 40)
+    .attr("height", height + 40)
+    .attr("fill", "url(#oceanGradient)");
 
   svg.append("g")
     .attr("id", "continent-layer")
@@ -404,6 +407,7 @@ function createBarChart({ element, data, height = 320 }) {
       .domain(["y2023", "y2024"])
       .range(["#f97316", "#fb3c3c"]);
 
+  // ----- AXES -----
   const xAxis = g.append("g")
       .attr("transform", `translate(0,${innerHeight})`)
       .call(d3.axisBottom(x0))
@@ -412,12 +416,20 @@ function createBarChart({ element, data, height = 320 }) {
 
   xAxis.selectAll("path,line").attr("stroke", "#4b5563");
 
+  const yTicks = y.ticks(6);
+
   const yAxis = g.append("g")
-      .call(d3.axisLeft(y).ticks(6))
+      .call(d3.axisLeft(y).tickValues(yTicks))
       .attr("font-size", 11)
       .attr("color", "#e5e7eb");
 
-  yAxis.selectAll("path,line").attr("stroke", "#4b5563");
+  // Make y-axis line visible
+  yAxis.select("path")
+       .attr("stroke", "#e5e7eb")
+       .attr("stroke-width", 1.4);
+
+  yAxis.selectAll("line")
+       .attr("stroke", "#4b5563");
 
   g.append("text")
       .attr("transform", "rotate(-90)")
@@ -430,11 +442,12 @@ function createBarChart({ element, data, height = 320 }) {
       .style("font-weight", "600")
       .text("Fire Count");
 
-  // Background horizontal grid
+  // ----- GRID (NO TOP LINE) -----
   g.append("g")
     .attr("class", "grid")
     .call(
       d3.axisLeft(y)
+        .tickValues(yTicks.slice(0, -1))   // drop max tick to avoid top white line
         .tickSize(-innerWidth)
         .tickFormat("")
     )

@@ -337,6 +337,11 @@ section[data-chapter="conclusion"].is-active {
   backdrop-filter: blur(14px);
 }
 
+/* Let axes + labels breathe */
+.chart-container svg {
+  overflow: visible;
+}
+
 /* ================== TOOLTIP ================== */
 
 .fire-tooltip {
