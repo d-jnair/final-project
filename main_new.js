@@ -412,6 +412,11 @@ function createBarChart({ element, data, height = 320 }) {
       .attr("transform", `translate(0,${innerHeight})`)
       .call(d3.axisBottom(x0))
       .attr("font-size", 12)
+      .selectAll("text")
+      .style("text-anchor", "end") // Align text to the end of the tick
+      .attr("dx", "-.8em")        // Shift text left
+      .attr("dy", ".15em")        // Shift text down
+      .attr("transform", "rotate(-45)")
       .attr("color", "#e5e7eb");
 
   xAxis.selectAll("path,line").attr("stroke", "#4b5563");
@@ -419,21 +424,15 @@ function createBarChart({ element, data, height = 320 }) {
   const yTicks = y.ticks(6);
 
   const yAxis = g.append("g")
-      .call(d3.axisLeft(y).tickValues(yTicks))
+      .call(d3.axisLeft(y).tickValues(yTicks.slice(0, -1)))
       .attr("font-size", 11)
       .attr("color", "#e5e7eb");
 
-  // Make y-axis line visible
-  yAxis.select("path")
-       .attr("stroke", "#e5e7eb")
-       .attr("stroke-width", 1.4);
-
-  yAxis.selectAll("line")
-       .attr("stroke", "#4b5563");
+  yAxis.selectAll("line").attr("stroke", "#4b5563");
 
   g.append("text")
       .attr("transform", "rotate(-90)")
-      .attr("y", 0 - margin.left + 10)
+      .attr("y", 0 - margin.left - 10)
       .attr("x", 0 - (innerHeight / 2))
       .attr("dy", "0.7em")
       .style("text-anchor", "middle")
@@ -529,7 +528,7 @@ function createBarChart({ element, data, height = 320 }) {
     .style("opacity", 1);
 
   const legend = svg.append("g")
-      .attr("transform", `translate(${width - 150}, 14)`);
+      .attr("transform", `translate(${width - 100}, 14)`);
 
   ["2023","2024"].forEach((year,i) => {
     legend.append("rect")

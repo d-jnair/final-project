@@ -342,6 +342,10 @@ section[data-chapter="conclusion"].is-active {
   overflow: visible;
 }
 
+.chart-container svg .axis path {
+  stroke-width: 0; /* Makes the axis line invisible */
+}
+
 /* ================== TOOLTIP ================== */
 
 .fire-tooltip {
