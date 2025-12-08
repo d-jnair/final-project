@@ -255,6 +255,10 @@ function drawMap() {
         .attr("fill", getRegionFill(d.properties.name));
     });
 
+  if (showRegionFRP && regionColorScale) {
+    drawFRPLegend(svg, regionColorScale, width, height);
+  }
+
   window.currentProjection = projection;
   drawFireDots(filteredData);
 
@@ -362,6 +366,168 @@ window.addEventListener("resize", () => {
 
   observer.observe(scrollyEl);
 })();
+
+// Function to draw the FRP color legend
+function drawFRPLegend(svg, colorScale, width, height) {
+  svg.select(".legend-container").remove();
+
+  if (!colorScale) return;
+
+  const legendHeight = 15;
+  const legendWidth = 200;
+  const margin = { top: 30, right: 30, bottom: 30, left: 30 };
+  const containerX = width - legendWidth - margin.right; 
+  const containerY = margin.top; 
+
+  const legendContainer = svg.append("g")
+    .attr("class", "legend-container")
+    .attr("transform", `translate(${containerX}, ${containerY})`);
+
+  // --- 1. Draw the gradient bar ---
+  const defs = legendContainer.append("defs");
+  const linearGradient = defs.append("linearGradient")
+    .attr("id", "linear-gradient-frp")
+    .attr("x1", "0%")
+    .attr("y1", "0%");
+
+  // Get the domain for the scale
+  const domain = colorScale.domain();
+  const range = d3.range(0, 1.01, 0.1); // 0% to 100% in 10 steps
+
+  // Add color stops
+  range.forEach(percent => {
+    const value = domain[0] + percent * (domain[1] - domain[0]);
+    linearGradient.append("stop")
+      .attr("offset", `${percent * 100}%`)
+      .attr("stop-color", colorScale(value));
+  });
+
+  // Draw the rectangle using the gradient fill
+  legendContainer.append("rect")
+    .attr("width", legendWidth)
+    .attr("height", legendHeight)
+    .style("fill", "url(#linear-gradient-frp)")
+    .style("stroke", "rgba(255,255,255,0.3)");
+
+  // --- 2. Draw the axis and labels ---
+
+  // Create an X scale for the axis labels
+  const legendScale = d3.scaleLinear()
+    .domain(domain)
+    .range([0, legendWidth]);
+
+  const legendAxis = d3.axisBottom(legendScale)
+    .ticks(5) // Adjust number of ticks
+    .tickSize(6)
+    .tickFormat(d3.format(".1f")); // Format to one decimal place
+
+  // Append the axis
+  legendContainer.append("g")
+    .attr("class", "legend-axis")
+    .attr("transform", `translate(0, ${legendHeight})`)
+    .call(legendAxis)
+    .select(".domain").remove(); // Remove the domain line
+
+  // Style the axis labels
+  legendContainer.selectAll(".tick text")
+    .attr("fill", "white")
+    .style("font-size", "10px");
+
+  // Style the axis lines
+  legendContainer.selectAll(".tick line")
+    .attr("stroke", "rgba(255,255,255,0.5)");
+
+  // --- 3. Add Title ---
+  legendContainer.append("text")
+    .attr("class", "legend-title")
+    .attr("x", 0)
+    .attr("y", -5)
+    .attr("fill", "white")
+    .style("font-size", "12px")
+    .style("font-weight", "bold")
+    .text("Mean Fire Radiative Power (MW)");
+}
+
+// ================== POPUP HINT LOGIC ==================
+const popupMap = document.getElementById("popupMap");
+const popupBar = document.getElementById("popupBar");
+const popupFact1 = document.getElementById("popupFact1");
+const popupFact2 = document.getElementById("popupFact2");
+
+
+let shownMapPopup = false;
+let shownBarPopup = false;
+let shownFact1Popup = false;
+let shownFact2Popup = false;
+
+let mapTooltipTriggered = false;
+let barTooltipTriggered = false;
+
+// Show helper
+function showPopup(el) {
+  el.classList.add("show");
+}
+
+// Hide helper
+function hidePopup(el) {
+  el.classList.remove("show");
+}
+
+// Detect scroll into specific sections
+window.addEventListener("scroll", () => {
+  const chapter1 = document.querySelector(`section[data-chapter="1"]`);
+  const chapter1Compare = document.querySelector(`section[data-chapter="1-compare"]`);
+  const chapter2 = document.querySelector(`section[data-chapter="2"]`);
+  const chapter4 = document.querySelector(`section[data-chapter="4"]`);
+
+  const rect1 = chapter1.getBoundingClientRect();
+  const rect1c = chapter1Compare.getBoundingClientRect();
+  const rect2 = chapter2.getBoundingClientRect();
+  const rect4 = chapter4.getBoundingClientRect();
+  
+  // Define a visibility threshold (e.g., 20% of the viewport height)
+  const threshold = window.innerHeight * 0.2;
+  const isChapter1Visible = rect1.top < window.innerHeight - threshold && rect1.bottom > threshold;
+  const isChapter1CompareVisible = rect1c.top < window.innerHeight - threshold && rect1c.bottom > threshold;
+  const isChapter2Visible = rect2.top < window.innerHeight - threshold && rect2.bottom > threshold;
+  const isChapter4Visible = rect4.top < window.innerHeight - threshold && rect4.bottom > threshold;
+
+  // ---------------- CHAPTER 1 → Show map popup ----------------
+  if (!shownMapPopup && isChapter1Visible) {
+    showPopup(popupMap);
+    shownMapPopup = true;
+  }
+  if (popupMap.classList.contains("show") && !isChapter1Visible) {
+    hidePopup(popupMap);
+  }
+
+  // ---------------- CHAPTER 1 COMPARE → Show bar popup ----------------
+  if (!shownBarPopup && isChapter1CompareVisible) {
+    showPopup(popupBar);
+    shownBarPopup = true;
+  }
+  if (popupBar.classList.contains("show") && !isChapter1CompareVisible) {
+    hidePopup(popupBar);
+  }
+
+  // ---------------- CHAPTER 2 → Show Fun Fact 2 popup ----------------
+  if (!shownFact1Popup && isChapter2Visible) {
+    showPopup(popupFact1);
+    shownFact1Popup = true;
+  }
+  if (popupFact1.classList.contains("show") && !isChapter2Visible) {
+    hidePopup(popupFact1);
+  }
+  
+  // ---------------- CHAPTER 4 → Show Fun Fact 4 popup ----------------
+  if (!shownFact2Popup && isChapter4Visible) {
+    showPopup(popupFact2);
+    shownFact2Popup = true;
+  }
+  if (popupFact2.classList.contains("show") && !isChapter4Visible) {
+    hidePopup(popupFact2);
+  }
+});
 
 //=================== BAR GRAPHS =====================
 createBarChart({
@@ -637,3 +803,4 @@ if (scrolly) {
 
   sections.forEach(s => observer.observe(s));
 })();
+

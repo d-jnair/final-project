@@ -425,33 +425,3 @@ section[data-chapter="conclusion"].is-active {
     font-size: 0.96rem;
   }
 }
-
-/* ================== POPUP (MODIFIED FOR FIRE THEME) ================== */
-
-.popup-hint {
-  position: fixed;
-  bottom: 50px; 
-  left: 50%;
-  right: auto; 
-  transform: translateX(-50%); 
-  top: auto;
-  background: rgba(43, 8, 5, 0.95); /* Dark Red/Black */
-  border: 1px solid #ff5722; /* Vibrant Orange/Red */
-  padding: 18px 24px;
-  border-radius: 10px;
-  color: white;
-  font-size: 16px;
-  z-index: 999999;
-  box-shadow: 
-    0 0 10px rgba(255, 87, 34, 0.8), /* Inner glow */
-    0 14px 35px rgba(0, 0, 0, 0.6); /* Standard shadow */
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.35s ease;
-}
-
-.popup-hint.show {
-  opacity: 1;
-  pointer-events: auto;
-}
-
