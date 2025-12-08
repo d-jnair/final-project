@@ -1,0 +1,260 @@
+/* Reset basic margins and padding */
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* Prevent scrollbars */
+}
+
+/* General body styling and background */
+body {
+    font-family: sans-serif;
+    text-align: center;
+    background-color: #f9f9f9;
+}
+
+h1 {
+  margin-top: 20px;
+}
+
+/* Ensure SVG and Canvas fill the viewport and are positioned absolutely */
+#map, #dots {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% - 33%);
+    height: 100%;
+}
+
+/* Place SVG (map outline) below Canvas (fire points) */
+#map {
+    z-index: 5;
+    background: #f0f0f0; /* Light background for the map area */
+}
+
+
+/* Place Canvas (fire points) above SVG */
+#dots {
+    z-index: 10;
+    /* This makes the background transparent so the SVG is visible */
+}
+
+/* New: Make the Canvas layer ignore mouse events so clicks go through to the SVG map */
+canvas {
+  pointer-events: none; 
+}
+
+/* New: Styling for D3 elements */
+.country {
+  fill: #eee;
+  stroke: #aaa;
+}
+
+.hotspot {
+  stroke: #333;
+  stroke-width: 0.5px;
+  opacity: 0.7;
+}
+
+/* New: Selector positioning and styling */
+#continent-selector {
+  /* Positioning is necessary for z-index to work */
+  position: absolute; 
+  top: 10px;
+  right: 10px;
+  
+  /* CRITICAL FIX: Ensure it is on top of the map/canvas (z-index: 10) */
+  z-index: 10; 
+  
+  /* Styling for appearance */
+  padding: 8px 12px;
+  font-size: 16px;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+#month-slider-container {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 10px 15px;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  text-align: center;
+  z-index: 15;
+  font-family: sans-serif;
+}
+
+#month-label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #333;
+}
+
+#month-slider {
+  width: 200px;
+  height: 6px;
+  -webkit-appearance: none;
+  background: #ddd;
+  border-radius: 5px;
+  outline: none;
+  transition: background 0.3s;
+}
+
+#month-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff4500; 
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0,0,0,0.3);
+  transition: background 0.3s;
+}
+
+#month-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff4500;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0,0,0,0.3);
+}
+
+#slider-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#play-btn {
+  background-color: #ff4500; 
+  border: none;
+  color: white;
+  font-size: 16px;
+  padding: 6px 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transition: background 0.3s, transform 0.2s;
+}
+
+#play-btn:hover {
+  background-color: #ff6347;
+  transform: scale(1.1);
+}
+
+#reset-btn {
+  background-color: #555; 
+  border: none;
+  color: white;
+  font-size: 16px;
+  padding: 6px 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transition: background 0.3s, transform 0.2s;
+}
+
+#reset-btn:hover {
+  background-color: #777;
+  transform: scale(1.1);
+}
+
+.fire-tooltip {
+    transition: opacity 0.15s ease;
+    color: #333;
+    max-width: 260px;
+}
+
+/* Right-side narrative panel */
+#panel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 33%;
+  height: 100%;
+  background: #fffdf9;
+  border-left: 1px solid #ddd;
+  box-shadow: -6px 0 16px rgba(0,0,0,0.06);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 24px;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+/* Title and hook */
+#panel-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #222;
+}
+
+#panel-hook {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #444;
+  margin-bottom: 16px;
+}
+
+/* Chapter buttons */
+#panel-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.chapter-btn,
+#overview-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #f7f7f7;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.chapter-btn:hover,
+#overview-btn:hover {
+  background-color: #ffe8dc;
+  transform: scale(1.03);
+}
+
+.chapter-btn.active {
+  background-color: #ffbe9b;
+  border-color: #ff4500;
+  color: #000;
+}
+
+/* Chapter content */
+#panel-content {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+}
+
+#panel-content h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 6px;
+  color: #222;
+}
+
+#panel-content p {
+  margin-bottom: 12px;
+}
