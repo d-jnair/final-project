@@ -448,17 +448,19 @@ function drawFRPLegend(svg, colorScale, width, height) {
     .text("Mean Fire Radiative Power (MW)");
 }
 
-// ================== POPUP HINT LOGIC ==================
+// ================== POPUP LOGIC ==================
 const popupMap = document.getElementById("popupMap");
 const popupBar = document.getElementById("popupBar");
 const popupFact1 = document.getElementById("popupFact1");
 const popupFact2 = document.getElementById("popupFact2");
+const popupConclusion = document.getElementById("popupConclusion");
 
 
 let shownMapPopup = false;
 let shownBarPopup = false;
 let shownFact1Popup = false;
 let shownFact2Popup = false;
+let shownConclusion = false;
 
 let mapTooltipTriggered = false;
 let barTooltipTriggered = false;
@@ -479,11 +481,13 @@ window.addEventListener("scroll", () => {
   const chapter1Compare = document.querySelector(`section[data-chapter="1-compare"]`);
   const chapter2 = document.querySelector(`section[data-chapter="2"]`);
   const chapter4 = document.querySelector(`section[data-chapter="4"]`);
+  const conclusion = document.querySelector(`section[data-chapter="conclusion"]`);
 
   const rect1 = chapter1.getBoundingClientRect();
   const rect1c = chapter1Compare.getBoundingClientRect();
   const rect2 = chapter2.getBoundingClientRect();
   const rect4 = chapter4.getBoundingClientRect();
+  const rect5 = conclusion.getBoundingClientRect();
   
   // Define a visibility threshold (e.g., 20% of the viewport height)
   const threshold = window.innerHeight * 0.2;
@@ -491,6 +495,7 @@ window.addEventListener("scroll", () => {
   const isChapter1CompareVisible = rect1c.top < window.innerHeight - threshold && rect1c.bottom > threshold;
   const isChapter2Visible = rect2.top < window.innerHeight - threshold && rect2.bottom > threshold;
   const isChapter4Visible = rect4.top < window.innerHeight - threshold && rect4.bottom > threshold;
+  const isConclusionVisible = rect5.top < window.innerHeight - threshold && rect5.bottom > threshold;
 
   // ---------------- CHAPTER 1 → Show map popup ----------------
   if (!shownMapPopup && isChapter1Visible) {
@@ -526,6 +531,15 @@ window.addEventListener("scroll", () => {
   }
   if (popupFact2.classList.contains("show") && !isChapter4Visible) {
     hidePopup(popupFact2);
+  }
+
+// ---------------- Conclusion → Reminder to use slider ----------------
+if (!shownConclusion && isConclusionVisible) {
+    showPopup(popupConclusion);
+    shownConclusion = true;
+  }
+  if (popupConclusion.classList.contains("show") && !isConclusionVisible) {
+    hidePopup(popupConclusion);
   }
 });
 
@@ -766,7 +780,7 @@ if (scrolly) {
         activeMonth = 11;
         break;
       case "conclusion":
-      default:
+        activeMonth = 1;
         break;
     }
 
@@ -804,3 +818,80 @@ if (scrolly) {
   sections.forEach(s => observer.observe(s));
 })();
 
+// ================== MONTH SLIDER ==================
+const monthSlider = document.getElementById("month-slider");
+const monthLabel  = document.getElementById("month-label");
+const playBtn     = document.getElementById("play-btn");
+const resetBtn    = document.getElementById("reset-btn");
+
+if (!monthSlider || !monthLabel || !playBtn || !resetBtn) {
+  console.warn("Slider controls missing in DOM — check IDs");
+} else {
+
+  let playbackInterval = null;
+
+  const MONTH_NAMES = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+  ];
+
+  function updateMonthFromSlider(value) {
+    activeMonth = +value;
+    monthLabel.textContent = `Month: ${MONTH_NAMES[activeMonth - 1]} 2024`;
+    // redraw the map for the new activeMonth
+    drawMap();
+  }
+
+  // when user drags slider: update and pause playback
+  monthSlider.addEventListener("input", (e) => {
+    // if playing, pause so manual adjustment stops automated playback
+    if (playbackInterval) {
+      clearInterval(playbackInterval);
+      playbackInterval = null;
+      playBtn.textContent = "▶️";
+    }
+    updateMonthFromSlider(e.target.value);
+  });
+
+  // play / pause toggle
+  playBtn.addEventListener("click", () => {
+    if (playbackInterval) {
+      // currently playing -> pause
+      clearInterval(playbackInterval);
+      playbackInterval = null;
+      playBtn.textContent = "▶️";
+      return;
+    }
+
+    // start playback
+    playBtn.textContent = "⏸️";
+    playbackInterval = setInterval(() => {
+      activeMonth = activeMonth + 1;
+      if (activeMonth > 12) activeMonth = 1;
+
+      monthSlider.value = activeMonth;
+      updateMonthFromSlider(activeMonth);
+    }, 1000); // change speed here (ms)
+  });
+
+  // reset button: stop + go to January
+  resetBtn.addEventListener("click", () => {
+    if (playbackInterval) {
+      clearInterval(playbackInterval);
+      playbackInterval = null;
+    }
+    playBtn.textContent = "▶️";
+    activeMonth = 1;
+    monthSlider.value = 1;
+    updateMonthFromSlider(1);
+  });
+
+  // auto-pause when user scrolls away (prevent runaway playback)
+  window.addEventListener("scroll", () => {
+    if (playbackInterval) {
+      clearInterval(playbackInterval);
+      playbackInterval = null;
+      playBtn.textContent = "▶️";
+    }
+  });
+}
