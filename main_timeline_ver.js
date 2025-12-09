@@ -48,21 +48,19 @@ const chartPanels = {
 
 let allData = {};
 let activeMonth = 1;
+let monthStart = 1;
+let monthEnd = 1;
 let showRegionFRP = false;
 let africaFeatures = null;
 let hasDrawnMapOnce = false;
-let showFireDots = true;  
+let scrollListener = null;
 
 // ---------------------- CANVAS DOTS --------------------------
 function drawFireDots(data) {
   const projection = window.currentProjection;
   if (!projection) return;
 
-  // Always clear previous dots
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // If user turned dots off, leave canvas empty
-  if (!showFireDots) return;
 
   // Make dots pop more when FRP choropleth is on
   ctx.fillStyle = showRegionFRP
@@ -214,8 +212,8 @@ function drawMap() {
     .append("path")
     .attr("d", path)
     .attr("fill", d => getRegionFill(d.properties.name))
-    .attr("stroke", showRegionFRP ? "#2f364c" : "#e5e7eb")   // white when FRP off
-    .attr("stroke-width", showRegionFRP ? 0.65 : 0.9)
+    .attr("stroke", "#2f364c")
+    .attr("stroke-width", 0.65)
     .on("mouseover", function (event, d) {
       const countryName = d.properties.name;
       const csvCountryName = COUNTRY_NAME_FIX[countryName] || countryName;
@@ -255,14 +253,10 @@ function drawMap() {
     .on("mouseout", function (event, d) {
       hideTooltip();
       d3.select(this)
-        .attr("stroke-width", showRegionFRP ? 0.65 : 0.9)
-        .attr("stroke", showRegionFRP ? "#2f364c" : "#e5e7eb")
+        .attr("stroke-width", 0.65)
+        .attr("stroke", "#2f364c")
         .attr("fill", getRegionFill(d.properties.name));
     });
-
-  if (showRegionFRP && regionColorScale) {
-    drawFRPLegend(svg, regionColorScale, width, height);
-  }
 
   window.currentProjection = projection;
   drawFireDots(filteredData);
@@ -319,7 +313,6 @@ window.addEventListener("resize", () => {
 (function createRegionToggle() {
   if (document.getElementById('frp-region-toggle')) return;
 
-  // ----- FRP BUTTON -----
   const btn = document.createElement('button');
   btn.id = "frp-region-toggle";
   btn.textContent = "Region FRP: off";
@@ -339,44 +332,15 @@ window.addEventListener("resize", () => {
   btn.style.textTransform = "uppercase";
   btn.style.backdropFilter = "blur(14px)";
   btn.style.boxShadow = "0 14px 35px rgba(0,0,0,0.75)";
+  btn.style.position = "fixed";
+
   btn.style.display = "none";
 
   document.body.appendChild(btn);
 
-  // ----- NEW: FIRE DOTS BUTTON -----
-  const dotsBtn = document.createElement('button');
-  dotsBtn.id = "dots-toggle";
-  dotsBtn.textContent = "Fire Dots: on";
-
-  dotsBtn.style.position = "fixed";
-  dotsBtn.style.bottom = "20px";
-  dotsBtn.style.left = "180px";
-  dotsBtn.style.zIndex = 9999;
-  dotsBtn.style.padding = "7px 14px";
-  dotsBtn.style.borderRadius = "999px";
-  dotsBtn.style.border = "1px solid rgba(255,255,255,0.22)";
-  dotsBtn.style.background = "rgba(7,10,21,0.88)";
-  dotsBtn.style.cursor = "pointer";
-  dotsBtn.style.fontSize = "11px";
-  dotsBtn.style.color = "#f9fafb";
-  dotsBtn.style.letterSpacing = "0.09em";
-  dotsBtn.style.textTransform = "uppercase";
-  dotsBtn.style.backdropFilter = "blur(14px)";
-  dotsBtn.style.boxShadow = "0 14px 35px rgba(0,0,0,0.75)";
-  dotsBtn.style.display = "none";
-
-  document.body.appendChild(dotsBtn);
-
-  // ----- CLICK HANDLERS -----
   btn.addEventListener("click", () => {
     showRegionFRP = !showRegionFRP;
     btn.textContent = showRegionFRP ? "Region FRP: on" : "Region FRP: off";
-    drawMap();
-  });
-
-  dotsBtn.addEventListener("click", () => {
-    showFireDots = !showFireDots;
-    dotsBtn.textContent = showFireDots ? "Fire Dots: on" : "Fire Dots: off";
     drawMap();
   });
 
@@ -388,7 +352,6 @@ window.addEventListener("resize", () => {
     entries.forEach(entry => {
       const visible = entry.isIntersecting && scrollyEl.classList.contains('active');
       btn.style.display = visible ? "block" : "none";
-      dotsBtn.style.display = visible ? "block" : "none";
 
       if (!dotsEl) return;
 
@@ -402,116 +365,6 @@ window.addEventListener("resize", () => {
 
   observer.observe(scrollyEl);
 })();
-
-// Function to draw the FRP color legend
-function drawFRPLegend(svg, colorScale, width, height) {
-  svg.select(".legend-container").remove();
-
-  if (!colorScale) return;
-
-  const legendHeight = 15;
-  const legendWidth = 200;
-  const margin = { top: 30, right: 30, bottom: 30, left: 30 };
-  const containerX = width - legendWidth - margin.right; 
-  const containerY = margin.top; 
-
-  const legendContainer = svg.append("g")
-    .attr("class", "legend-container")
-    .attr("transform", `translate(${containerX}, ${containerY})`);
-
-  // --- 1. Draw the gradient bar ---
-  const defs = legendContainer.append("defs");
-  const linearGradient = defs.append("linearGradient")
-    .attr("id", "linear-gradient-frp")
-    .attr("x1", "0%")
-    .attr("y1", "0%");
-
-  const domain = colorScale.domain();
-  const range = d3.range(0, 1.01, 0.1);
-
-  range.forEach(percent => {
-    const value = domain[0] + percent * (domain[1] - domain[0]);
-    linearGradient.append("stop")
-      .attr("offset", `${percent * 100}%`)
-      .attr("stop-color", colorScale(value));
-  });
-
-  legendContainer.append("rect")
-    .attr("width", legendWidth)
-    .attr("height", legendHeight)
-    .style("fill", "url(#linear-gradient-frp)")
-    .style("stroke", "rgba(255,255,255,0.3)");
-
-  const legendScale = d3.scaleLinear()
-    .domain(domain)
-    .range([0, legendWidth]);
-
-  const legendAxis = d3.axisBottom(legendScale)
-    .ticks(5)
-    .tickSize(6)
-    .tickFormat(d3.format(".1f"));
-
-  legendContainer.append("g")
-    .attr("class", "legend-axis")
-    .attr("transform", `translate(0, ${legendHeight})`)
-    .call(legendAxis)
-    .select(".domain").remove();
-
-  legendContainer.selectAll(".tick text")
-    .attr("fill", "white")
-    .style("font-size", "10px");
-
-  legendContainer.selectAll(".tick line")
-    .attr("stroke", "rgba(255,255,255,0.5)");
-
-  legendContainer.append("text")
-    .attr("class", "legend-title")
-    .attr("x", 0)
-    .attr("y", -5)
-    .attr("fill", "white")
-    .style("font-size", "12px")
-    .style("font-weight", "bold")
-    .text("Mean Fire Radiative Power (MW)");
-}
-
-// ================== POPUP LOGIC ==================
-// Show helper
-function showPopup(el) {
-  el.classList.add("show");
-}
-
-function hidePopup(el) {
-  el.classList.remove("show");
-}
-
-function isMostlyVisible(rect, ratio = 0.8) {
-  const sectionHeight = rect.height;
-  const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
-  return visibleHeight / sectionHeight >= ratio;
-}
-
-const popups = [
-  { el: document.getElementById("popupMap"), section: document.querySelector('section[data-chapter="1"]'), shown: false },
-  { el: document.getElementById("popupBar"), section: document.querySelector('section[data-chapter="1-compare"]'), shown: false },
-  { el: document.getElementById("popupFact1"), section: document.querySelector('section[data-chapter="2"]'), shown: false },
-  { el: document.getElementById("popupFact2"), section: document.querySelector('section[data-chapter="4"]'), shown: false },
-  { el: document.getElementById("popupConclusion"), section: document.querySelector('section[data-chapter="conclusion"]'), shown: false },
-];
-
-// Detect scroll into specific sections
-window.addEventListener("scroll", () => {
-  popups.forEach(p => {
-    const rect = p.section.getBoundingClientRect();
-    if (!p.shown && isMostlyVisible(rect, 0.8)) {
-      showPopup(p.el);
-      p.shown = true;
-    }
-    if (p.el.classList.contains("show") && !isMostlyVisible(rect, 0.8)) {
-      hidePopup(p.el);
-    }
-  });
-});
-
 
 //=================== BAR GRAPHS =====================
 createBarChart({
@@ -563,9 +416,9 @@ function createBarChart({ element, data, height = 320 }) {
       .call(d3.axisBottom(x0))
       .attr("font-size", 12)
       .selectAll("text")
-      .style("text-anchor", "end")
-      .attr("dx", "-.8em")
-      .attr("dy", ".15em")
+      .style("text-anchor", "end") // Align text to the end of the tick
+      .attr("dx", "-.8em")        // Shift text left
+      .attr("dy", ".15em")        // Shift text down
       .attr("transform", "rotate(-45)")
       .attr("color", "#e5e7eb");
 
@@ -596,7 +449,7 @@ function createBarChart({ element, data, height = 320 }) {
     .attr("class", "grid")
     .call(
       d3.axisLeft(y)
-        .tickValues(yTicks.slice(0, -1))
+        .tickValues(yTicks.slice(0, -1))   // drop max tick to avoid top white line
         .tickSize(-innerWidth)
         .tickFormat("")
     )
@@ -611,7 +464,7 @@ function createBarChart({ element, data, height = 320 }) {
       .attr("class", "bar-group")
       .attr("transform", d => `translate(${x0(d.country)},0)`);
 
-  groups.selectAll("rect")
+  const bars = groups.selectAll("rect")
       .data(d => ["y2023", "y2024"].map(key => ({ key, value: d[key], country: d.country })))
       .enter()
       .append("rect")
@@ -702,19 +555,19 @@ function createBarChart({ element, data, height = 320 }) {
 // ================== SCROLLY LOGIC ==================
 const scrolly = document.getElementById("scrolly");
 
-if (scrolly) {
-  const scrollyObserver = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting && !scrolly.classList.contains('active')) {
-        scrolly.classList.add('active');
-        activeMonth = 1;
-        drawMap();
-      }
-    });
-  }, { threshold: 1 });
+// if (scrolly) {
+//   const scrollyObserver = new IntersectionObserver(entries => {
+//     entries.forEach(entry => {
+//       if (entry.isIntersecting && !scrolly.classList.contains('active')) {
+//         scrolly.classList.add('active');
+//         activeMonth = 1;
+//         drawMap();
+//       }
+//     });
+//   }, { threshold: 1 });
 
-  scrollyObserver.observe(scrolly);
-}
+//   scrollyObserver.observe(scrolly);
+// }
 
 (function initScrolly() {
   const sections = Array.from(document.querySelectorAll("#sections section"));
@@ -732,39 +585,115 @@ if (scrolly) {
       drawMap();
     }
 
-    switch (chapterKey) {
-      case "1":
-      case "1-compare":
-        activeMonth = 1;
-        break;
-      case "2":
-        activeMonth = 6;
-        break;
-      case "2-compare":
-        activeMonth = 7;
-        break;
-      case "2-congo":
-        activeMonth = 8;
-        break;
-      case "3":
-        activeMonth = 9;
-        break;
-      case "3-southafrica":
-        activeMonth = 10;
-        break;
-      case "4":
-        activeMonth = 11;
-        break;
-      case "conclusion":
-        activeMonth = 12;
-        break;
-      default:
-        break;
+    // switch (chapterKey) {
+    //   case "1":
+    //   case "1-compare":
+    //     activeMonth = 1;
+    //     break;
+    //   case "2":
+    //     activeMonth = 6;
+    //     break;
+    //   case "2-compare":
+    //     activeMonth = 7;
+    //     break;
+    //   case "2-congo":
+    //     activeMonth = 8;
+    //     break;
+    //   case "3":
+    //     activeMonth = 9;
+    //     break;
+    //   case "3-southafrica":
+    //     activeMonth = 10;
+    //     break;
+    //   case "4":
+    //     activeMonth = 11;
+    //     break;
+    //   case "conclusion":
+    //     activeMonth = 12;
+    //     break;
+    //   default:
+    //     break;
+    // }
+
+        // --- MONTH / SCRUB LOGIC ---
+
+    // Always remove any previous scroll listener when switching sections
+    if (scrollListener) {
+      window.removeEventListener('scroll', scrollListener);
+      scrollListener = null;
     }
 
-    if (scrolly.classList.contains('active')) {
-      drawMap();
+    let enableScrub = false;
+
+    // MULTI-MONTH SCRUB SECTIONS
+    if (chapterKey === '1') {
+      // Jan–Mar scrub
+      monthStart = 1;
+      monthEnd = 3;
+      enableScrub = true;
+    } else if (chapterKey === '1-compare') {
+      // Apr–May scrub
+      monthStart = 4;
+      monthEnd = 5;
+      enableScrub = true;
+    } else if (chapterKey === '4') {
+      // Nov–Dec scrub
+      monthStart = 11;
+      monthEnd = 12;
+      enableScrub = true;
     }
+
+    // SINGLE-MONTH SECTIONS (no scrubbing)
+    else if (chapterKey === '2') {
+      monthStart = monthEnd = 6;   // June
+    } else if (chapterKey === '2-compare') {
+      monthStart = monthEnd = 7;   // July
+    } else if (chapterKey === '2-congo') {
+      monthStart = monthEnd = 8;   // August
+    } else if (chapterKey === '3') {
+      monthStart = monthEnd = 9;   // September
+    } else if (chapterKey === '3-southafrica') {
+      monthStart = monthEnd = 10;  // October
+    } else {
+      // intro / conclusion can just keep whatever the last month was
+    }
+
+    // Start this section on its first month
+    activeMonth = monthStart;
+    drawMap();
+
+    // Only attach scrubbing when enabled
+    if (enableScrub) {
+      scrollListener = () => {
+        const rect = el.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const sectionHeight = rect.height || 1;
+
+        // Use the viewport center to compute progress through THIS section
+        const center = viewportHeight / 2;
+        let progress = (center - rect.top) / sectionHeight;
+        progress = Math.min(Math.max(progress, 0), 1); // clamp 0–1
+
+        const span = monthEnd - monthStart;
+        let newMonth = monthStart + progress * span;
+        newMonth = Math.round(newMonth);
+        newMonth = Math.max(monthStart, Math.min(monthEnd, newMonth));
+
+        if (newMonth !== activeMonth) {
+          activeMonth = newMonth;
+          drawMap();
+        }
+      };
+
+      window.addEventListener('scroll', scrollListener);
+    }
+
+
+    console.log(activeMonth);
+
+    // if (scrolly.classList.contains('active')) {
+    //   drawMap();
+    // }
 
     if (chapterKey === "1-compare") {
       createBarChart({ element: "#chart1", data: CHART_DATA.chart1 });
@@ -795,81 +724,3 @@ if (scrolly) {
 
   sections.forEach(s => observer.observe(s));
 })();
-
-// ================== MONTH SLIDER ==================
-const monthSlider = document.getElementById("month-slider");
-const monthLabel  = document.getElementById("month-label");
-const playBtn     = document.getElementById("play-btn");
-const resetBtn    = document.getElementById("reset-btn");
-
-if (!monthSlider || !monthLabel || !playBtn || !resetBtn) {
-  console.warn("Slider controls missing in DOM — check IDs");
-} else {
-
-  let playbackInterval = null;
-
-  const MONTH_NAMES = [
-    "January","February","March","April","May","June",
-    "July","August","September","October","November","December"
-  ];
-
-  function updateMonthFromSlider(value) {
-    activeMonth = +value;
-    monthLabel.textContent = `Month: ${MONTH_NAMES[activeMonth - 1]} 2024`;
-    // redraw the map for the new activeMonth
-    drawMap();
-  }
-
-  // when user drags slider: update and pause playback
-  monthSlider.addEventListener("input", (e) => {
-    // if playing, pause so manual adjustment stops automated playback
-    if (playbackInterval) {
-      clearInterval(playbackInterval);
-      playbackInterval = null;
-      playBtn.textContent = "▶️";
-    }
-    updateMonthFromSlider(e.target.value);
-  });
-
-  // play / pause toggle
-  playBtn.addEventListener("click", () => {
-    if (playbackInterval) {
-      // currently playing -> pause
-      clearInterval(playbackInterval);
-      playbackInterval = null;
-      playBtn.textContent = "▶️";
-      return;
-    }
-
-    // start playback
-    playBtn.textContent = "⏸️";
-    playbackInterval = setInterval(() => {
-      activeMonth = activeMonth + 1;
-      if (activeMonth > 12) activeMonth = 1;
-
-      monthSlider.value = activeMonth;
-      updateMonthFromSlider(activeMonth);
-    }, 1000); // change speed here (ms)
-  });
-
-  // reset button: stop + go to January
-  resetBtn.addEventListener("click", () => {
-    if (playbackInterval) {
-      clearInterval(playbackInterval);
-      playbackInterval = null;
-    }
-    playBtn.textContent = "▶️";
-    activeMonth = 1;
-    monthSlider.value = 1;
-    updateMonthFromSlider(1);
-  });
-
-  // auto-pause when user scrolls away (prevent runaway playback)
-  window.addEventListener("scroll", () => {
-    if (playbackInterval) {
-      clearInterval(playbackInterval);
-      playbackInterval = null;
-      playBtn.textContent = "▶️";
-    }
-  });
-}
