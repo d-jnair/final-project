@@ -51,13 +51,18 @@ let activeMonth = 1;
 let showRegionFRP = false;
 let africaFeatures = null;
 let hasDrawnMapOnce = false;
+let showFireDots = true;   // NEW: toggle for fire dots
 
 // ---------------------- CANVAS DOTS --------------------------
 function drawFireDots(data) {
   const projection = window.currentProjection;
   if (!projection) return;
 
+  // Always clear previous dots
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // If user turned dots off, leave canvas empty
+  if (!showFireDots) return;
 
   // Make dots pop more when FRP choropleth is on
   ctx.fillStyle = showRegionFRP
@@ -209,8 +214,8 @@ function drawMap() {
     .append("path")
     .attr("d", path)
     .attr("fill", d => getRegionFill(d.properties.name))
-    .attr("stroke", "#2f364c")
-    .attr("stroke-width", 0.65)
+    .attr("stroke", showRegionFRP ? "#2f364c" : "#e5e7eb")   // white when FRP off
+    .attr("stroke-width", showRegionFRP ? 0.65 : 0.9)
     .on("mouseover", function (event, d) {
       const countryName = d.properties.name;
       const csvCountryName = COUNTRY_NAME_FIX[countryName] || countryName;
@@ -250,8 +255,8 @@ function drawMap() {
     .on("mouseout", function (event, d) {
       hideTooltip();
       d3.select(this)
-        .attr("stroke-width", 0.65)
-        .attr("stroke", "#2f364c")
+        .attr("stroke-width", showRegionFRP ? 0.65 : 0.9)
+        .attr("stroke", showRegionFRP ? "#2f364c" : "#e5e7eb")
         .attr("fill", getRegionFill(d.properties.name));
     });
 
@@ -314,6 +319,7 @@ window.addEventListener("resize", () => {
 (function createRegionToggle() {
   if (document.getElementById('frp-region-toggle')) return;
 
+  // ----- FRP BUTTON -----
   const btn = document.createElement('button');
   btn.id = "frp-region-toggle";
   btn.textContent = "Region FRP: off";
@@ -333,15 +339,44 @@ window.addEventListener("resize", () => {
   btn.style.textTransform = "uppercase";
   btn.style.backdropFilter = "blur(14px)";
   btn.style.boxShadow = "0 14px 35px rgba(0,0,0,0.75)";
-  btn.style.position = "fixed";
-
   btn.style.display = "none";
 
   document.body.appendChild(btn);
 
+  // ----- NEW: FIRE DOTS BUTTON -----
+  const dotsBtn = document.createElement('button');
+  dotsBtn.id = "dots-toggle";
+  dotsBtn.textContent = "Fire Dots: on";
+
+  dotsBtn.style.position = "fixed";
+  dotsBtn.style.bottom = "20px";
+  dotsBtn.style.right = "20px";
+  dotsBtn.style.zIndex = 9999;
+  dotsBtn.style.padding = "7px 14px";
+  dotsBtn.style.borderRadius = "999px";
+  dotsBtn.style.border = "1px solid rgba(255,255,255,0.22)";
+  dotsBtn.style.background = "rgba(7,10,21,0.88)";
+  dotsBtn.style.cursor = "pointer";
+  dotsBtn.style.fontSize = "11px";
+  dotsBtn.style.color = "#f9fafb";
+  dotsBtn.style.letterSpacing = "0.09em";
+  dotsBtn.style.textTransform = "uppercase";
+  dotsBtn.style.backdropFilter = "blur(14px)";
+  dotsBtn.style.boxShadow = "0 14px 35px rgba(0,0,0,0.75)";
+  dotsBtn.style.display = "none";
+
+  document.body.appendChild(dotsBtn);
+
+  // ----- CLICK HANDLERS -----
   btn.addEventListener("click", () => {
     showRegionFRP = !showRegionFRP;
     btn.textContent = showRegionFRP ? "Region FRP: on" : "Region FRP: off";
+    drawMap();
+  });
+
+  dotsBtn.addEventListener("click", () => {
+    showFireDots = !showFireDots;
+    dotsBtn.textContent = showFireDots ? "Fire Dots: on" : "Fire Dots: off";
     drawMap();
   });
 
@@ -353,6 +388,7 @@ window.addEventListener("resize", () => {
     entries.forEach(entry => {
       const visible = entry.isIntersecting && scrollyEl.classList.contains('active');
       btn.style.display = visible ? "block" : "none";
+      dotsBtn.style.display = visible ? "block" : "none";
 
       if (!dotsEl) return;
 
@@ -390,11 +426,9 @@ function drawFRPLegend(svg, colorScale, width, height) {
     .attr("x1", "0%")
     .attr("y1", "0%");
 
-  // Get the domain for the scale
   const domain = colorScale.domain();
-  const range = d3.range(0, 1.01, 0.1); // 0% to 100% in 10 steps
+  const range = d3.range(0, 1.01, 0.1);
 
-  // Add color stops
   range.forEach(percent => {
     const value = domain[0] + percent * (domain[1] - domain[0]);
     linearGradient.append("stop")
@@ -402,42 +436,34 @@ function drawFRPLegend(svg, colorScale, width, height) {
       .attr("stop-color", colorScale(value));
   });
 
-  // Draw the rectangle using the gradient fill
   legendContainer.append("rect")
     .attr("width", legendWidth)
     .attr("height", legendHeight)
     .style("fill", "url(#linear-gradient-frp)")
     .style("stroke", "rgba(255,255,255,0.3)");
 
-  // --- 2. Draw the axis and labels ---
-
-  // Create an X scale for the axis labels
   const legendScale = d3.scaleLinear()
     .domain(domain)
     .range([0, legendWidth]);
 
   const legendAxis = d3.axisBottom(legendScale)
-    .ticks(5) // Adjust number of ticks
+    .ticks(5)
     .tickSize(6)
-    .tickFormat(d3.format(".1f")); // Format to one decimal place
+    .tickFormat(d3.format(".1f"));
 
-  // Append the axis
   legendContainer.append("g")
     .attr("class", "legend-axis")
     .attr("transform", `translate(0, ${legendHeight})`)
     .call(legendAxis)
-    .select(".domain").remove(); // Remove the domain line
+    .select(".domain").remove();
 
-  // Style the axis labels
   legendContainer.selectAll(".tick text")
     .attr("fill", "white")
     .style("font-size", "10px");
 
-  // Style the axis lines
   legendContainer.selectAll(".tick line")
     .attr("stroke", "rgba(255,255,255,0.5)");
 
-  // --- 3. Add Title ---
   legendContainer.append("text")
     .attr("class", "legend-title")
     .attr("x", 0)
@@ -454,7 +480,6 @@ const popupBar = document.getElementById("popupBar");
 const popupFact1 = document.getElementById("popupFact1");
 const popupFact2 = document.getElementById("popupFact2");
 
-
 let shownMapPopup = false;
 let shownBarPopup = false;
 let shownFact1Popup = false;
@@ -463,12 +488,10 @@ let shownFact2Popup = false;
 let mapTooltipTriggered = false;
 let barTooltipTriggered = false;
 
-// Show helper
 function showPopup(el) {
   el.classList.add("show");
 }
 
-// Hide helper
 function hidePopup(el) {
   el.classList.remove("show");
 }
@@ -485,14 +508,12 @@ window.addEventListener("scroll", () => {
   const rect2 = chapter2.getBoundingClientRect();
   const rect4 = chapter4.getBoundingClientRect();
   
-  // Define a visibility threshold (e.g., 20% of the viewport height)
   const threshold = window.innerHeight * 0.2;
   const isChapter1Visible = rect1.top < window.innerHeight - threshold && rect1.bottom > threshold;
   const isChapter1CompareVisible = rect1c.top < window.innerHeight - threshold && rect1c.bottom > threshold;
   const isChapter2Visible = rect2.top < window.innerHeight - threshold && rect2.bottom > threshold;
   const isChapter4Visible = rect4.top < window.innerHeight - threshold && rect4.bottom > threshold;
 
-  // ---------------- CHAPTER 1 → Show map popup ----------------
   if (!shownMapPopup && isChapter1Visible) {
     showPopup(popupMap);
     shownMapPopup = true;
@@ -501,7 +522,6 @@ window.addEventListener("scroll", () => {
     hidePopup(popupMap);
   }
 
-  // ---------------- CHAPTER 1 COMPARE → Show bar popup ----------------
   if (!shownBarPopup && isChapter1CompareVisible) {
     showPopup(popupBar);
     shownBarPopup = true;
@@ -510,7 +530,6 @@ window.addEventListener("scroll", () => {
     hidePopup(popupBar);
   }
 
-  // ---------------- CHAPTER 2 → Show Fun Fact 2 popup ----------------
   if (!shownFact1Popup && isChapter2Visible) {
     showPopup(popupFact1);
     shownFact1Popup = true;
@@ -519,7 +538,6 @@ window.addEventListener("scroll", () => {
     hidePopup(popupFact1);
   }
   
-  // ---------------- CHAPTER 4 → Show Fun Fact 4 popup ----------------
   if (!shownFact2Popup && isChapter4Visible) {
     showPopup(popupFact2);
     shownFact2Popup = true;
@@ -579,9 +597,9 @@ function createBarChart({ element, data, height = 320 }) {
       .call(d3.axisBottom(x0))
       .attr("font-size", 12)
       .selectAll("text")
-      .style("text-anchor", "end") // Align text to the end of the tick
-      .attr("dx", "-.8em")        // Shift text left
-      .attr("dy", ".15em")        // Shift text down
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", ".15em")
       .attr("transform", "rotate(-45)")
       .attr("color", "#e5e7eb");
 
@@ -612,7 +630,7 @@ function createBarChart({ element, data, height = 320 }) {
     .attr("class", "grid")
     .call(
       d3.axisLeft(y)
-        .tickValues(yTicks.slice(0, -1))   // drop max tick to avoid top white line
+        .tickValues(yTicks.slice(0, -1))
         .tickSize(-innerWidth)
         .tickFormat("")
     )
@@ -627,7 +645,7 @@ function createBarChart({ element, data, height = 320 }) {
       .attr("class", "bar-group")
       .attr("transform", d => `translate(${x0(d.country)},0)`);
 
-  const bars = groups.selectAll("rect")
+  groups.selectAll("rect")
       .data(d => ["y2023", "y2024"].map(key => ({ key, value: d[key], country: d.country })))
       .enter()
       .append("rect")
@@ -803,4 +821,3 @@ if (scrolly) {
 
   sections.forEach(s => observer.observe(s));
 })();
-
