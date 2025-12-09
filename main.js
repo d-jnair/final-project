@@ -775,12 +775,12 @@ if (scrolly) {
     if (chapterKey === '1') {
       // Jan–Mar scrub
       monthStart = 1;
-      monthEnd = 3;
+      monthEnd = 2;
       enableScrub = true;
     } else if (chapterKey === '1-compare') {
       // Apr–May scrub
-      monthStart = 4;
-      monthEnd = 5;
+      monthStart = 3;
+      monthEnd = 4;
       enableScrub = true;
     } else if (chapterKey === '4') {
       // Nov–Dec scrub
@@ -790,6 +790,9 @@ if (scrolly) {
     }
 
     // SINGLE-MONTH SECTIONS (no scrubbing)
+    else if (chapterKey === 'frp-explainer') {
+      monthStart = monthEnd = 5;
+    }
     else if (chapterKey === '2') {
       monthStart = monthEnd = 6;   // June
     } else if (chapterKey === '2-compare') {
