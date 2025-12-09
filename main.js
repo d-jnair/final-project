@@ -523,6 +523,7 @@ const popups = [
   { el: document.getElementById("popupFact1"), section: document.querySelector('section[data-chapter="2"]'), shown: false },
   { el: document.getElementById("popupFact2"), section: document.querySelector('section[data-chapter="4"]'), shown: false },
   { el: document.getElementById("popupConclusion"), section: document.querySelector('section[data-chapter="conclusion"]'), shown: false },
+  { el: document.getElementById("popupFRP"), section: document.querySelector('section[data-chapter="2-congo"]'), shown: false },
 ];
 
 // Detect scroll into specific sections
