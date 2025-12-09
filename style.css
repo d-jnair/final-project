@@ -180,6 +180,10 @@ body {
   position: relative;
 }
 
+#dots {
+  display: none;
+}
+
 /* Sticky map */
 #scrolly.active #map {
   display: block;
@@ -208,6 +212,20 @@ body {
 
 #dots.is-visible {
   display: block;
+  opacity: 1;
+}
+
+#scrolly.active #dots {
+  display: block;
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 64vw;
+  height: 100vh;
+  z-index: 2;
+}
+
+#scrolly.activate #dots.is-visible {
   opacity: 1;
 }
 
@@ -571,3 +589,38 @@ section[data-chapter="conclusion"].is-active {
 #reset-btn {
   border: 1px solid rgba(255,90,38,0.2);
 }
+
+#month-banner {
+  position: fixed;
+  top: 20px;
+  left: 6%;
+  transform: translate(-50%, -4px);
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(43, 8, 5, 0.95); /* Dark Red/Black */
+  border: 1px solid #ff5722; /* Vibrant Orange/Red */
+  box-shadow: 
+    0 0 10px rgba(255, 87, 34, 0.8), /* Inner glow */
+    0 14px 35px rgba(0, 0, 0, 0.6); /* Standard shadow */
+  color: #f9fafb;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px);
+  z-index: 9998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* visible state */
+#month-banner.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* when scrolly is active, show the banner */
+/* #scrolly.active ~ #month-banner,
+#scrolly.active #month-banner {
+  display: block;
+} */

@@ -46,6 +46,11 @@ const chartPanels = {
   "5":  { svg: "#chart5", countries: ["South Africa"] }
 };
 
+const MONTH_NAMES = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December"
+];
+
 let allData = {};
 let activeMonth = 1;
 let showRegionFRP = false;
@@ -77,6 +82,17 @@ function drawFireDots(data) {
       ctx.fill();
     }
   });
+}
+
+
+// ----- MONTH LABEL -----
+function updateMonthBanner() {
+  const banner = document.getElementById('month-banner');
+  if (!banner) return;
+  const name = MONTH_NAMES[activeMonth - 1] || 'Unknown';
+  if (name) {
+    banner.textContent = `${name} 2024`;
+  }
 }
 
 // ---------------------- TOOLTIP -----------------------------
@@ -272,6 +288,7 @@ function drawMap() {
     dotsEl.classList.add('is-visible');
     hasDrawnMapOnce = true;
   }
+  updateMonthBanner();
 }
 
 // ------------- DATA LOADING: AFRICA ONLY ----------------
@@ -389,6 +406,16 @@ window.addEventListener("resize", () => {
       const visible = entry.isIntersecting && scrollyEl.classList.contains('active');
       btn.style.display = visible ? "block" : "none";
       dotsBtn.style.display = visible ? "block" : "none";
+      
+      const banner = document.getElementById('month-banner');
+      if (banner) {
+        if (visible) {
+          banner.classList.add('is-visible');
+        }
+        else {
+          banner.classList.remove('is-visible');
+        }
+      }
 
       if (!dotsEl) return;
 
@@ -702,6 +729,8 @@ function createBarChart({ element, data, height = 320 }) {
 // ================== SCROLLY LOGIC ==================
 const scrolly = document.getElementById("scrolly");
 
+let scrollListener = null;
+
 if (scrolly) {
   const scrollyObserver = new IntersectionObserver(entries => {
     entries.forEach(entry => {
@@ -732,26 +761,78 @@ if (scrolly) {
       drawMap();
     }
 
-    switch (chapterKey) {
-      case "1":
-      case "1-compare":
-        activeMonth = 1;
-        break;
-      case "2":
-      case "2-compare":
-      case "2-congo":
-        activeMonth = 6;
-        break;
-      case "3":
-      case "3-southafrica":
-        activeMonth = 9;
-        break;
-      case "4":
-        activeMonth = 11;
-        break;
-      case "conclusion":
-        activeMonth = 1;
-        break;
+    // --- MONTH / SCRUB LOGIC ---
+
+    // Always remove any previous scroll listener when switching sections
+    if (scrollListener) {
+      window.removeEventListener('scroll', scrollListener);
+      scrollListener = null;
+    }
+
+    let enableScrub = false;
+
+    // MULTI-MONTH SCRUB SECTIONS
+    if (chapterKey === '1') {
+      // Jan–Mar scrub
+      monthStart = 1;
+      monthEnd = 3;
+      enableScrub = true;
+    } else if (chapterKey === '1-compare') {
+      // Apr–May scrub
+      monthStart = 4;
+      monthEnd = 5;
+      enableScrub = true;
+    } else if (chapterKey === '4') {
+      // Nov–Dec scrub
+      monthStart = 11;
+      monthEnd = 12;
+      enableScrub = true;
+    }
+
+    // SINGLE-MONTH SECTIONS (no scrubbing)
+    else if (chapterKey === '2') {
+      monthStart = monthEnd = 6;   // June
+    } else if (chapterKey === '2-compare') {
+      monthStart = monthEnd = 7;   // July
+    } else if (chapterKey === '2-congo') {
+      monthStart = monthEnd = 8;   // August
+    } else if (chapterKey === '3') {
+      monthStart = monthEnd = 9;   // September
+    } else if (chapterKey === '3-southafrica') {
+      monthStart = monthEnd = 10;  // October
+    } else {
+      monthStart = monthEnd = 1;
+    }
+
+    // Start this section on its first month
+    activeMonth = monthStart;
+    drawMap();
+
+    // Only attach scrubbing when enabled
+    if (enableScrub) {
+      scrollListener = () => {
+        const rect = el.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const sectionHeight = rect.height || 1;
+
+        // Use the viewport center to compute progress through THIS section
+        const center = viewportHeight / 2;
+        let progress = (center - rect.top) / sectionHeight;
+        progress = Math.min(Math.max(progress, 0), 1); // clamp 0–1
+
+        const span = monthEnd - monthStart;
+        let newMonth = monthStart + progress * span;
+        newMonth = Math.round(newMonth);
+        newMonth = Math.max(monthStart, Math.min(monthEnd, newMonth));
+
+        if (newMonth !== activeMonth) {
+          activeMonth = newMonth;
+          drawMap();
+          updateMonthBanner();
+        }
+      };
+
+      window.addEventListener('scroll', scrollListener);
     }
 
     if (scrolly.classList.contains('active')) {
@@ -799,11 +880,6 @@ if (!monthSlider || !monthLabel || !playBtn || !resetBtn) {
 } else {
 
   let playbackInterval = null;
-
-  const MONTH_NAMES = [
-    "January","February","March","April","May","June",
-    "July","August","September","October","November","December"
-  ];
 
   function updateMonthFromSlider(value) {
     activeMonth = +value;
