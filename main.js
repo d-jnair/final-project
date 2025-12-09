@@ -51,7 +51,7 @@ let activeMonth = 1;
 let showRegionFRP = false;
 let africaFeatures = null;
 let hasDrawnMapOnce = false;
-let showFireDots = true;   // NEW: toggle for fire dots
+let showFireDots = true;  
 
 // ---------------------- CANVAS DOTS --------------------------
 function drawFireDots(data) {
@@ -350,7 +350,7 @@ window.addEventListener("resize", () => {
 
   dotsBtn.style.position = "fixed";
   dotsBtn.style.bottom = "20px";
-  dotsBtn.style.right = "20px";
+  dotsBtn.style.left = "180px";
   dotsBtn.style.zIndex = 9999;
   dotsBtn.style.padding = "7px 14px";
   dotsBtn.style.borderRadius = "999px";
