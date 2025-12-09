@@ -449,22 +449,6 @@ function drawFRPLegend(svg, colorScale, width, height) {
 }
 
 // ================== POPUP LOGIC ==================
-const popupMap = document.getElementById("popupMap");
-const popupBar = document.getElementById("popupBar");
-const popupFact1 = document.getElementById("popupFact1");
-const popupFact2 = document.getElementById("popupFact2");
-const popupConclusion = document.getElementById("popupConclusion");
-
-
-let shownMapPopup = false;
-let shownBarPopup = false;
-let shownFact1Popup = false;
-let shownFact2Popup = false;
-let shownConclusion = false;
-
-let mapTooltipTriggered = false;
-let barTooltipTriggered = false;
-
 // Show helper
 function showPopup(el) {
   el.classList.add("show");
@@ -475,73 +459,34 @@ function hidePopup(el) {
   el.classList.remove("show");
 }
 
+function isMostlyVisible(rect, ratio = 0.8) {
+  const sectionHeight = rect.height;
+  const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+  return visibleHeight / sectionHeight >= ratio;
+}
+
+const popups = [
+  { el: document.getElementById("popupMap"), section: document.querySelector('section[data-chapter="1"]'), shown: false },
+  { el: document.getElementById("popupBar"), section: document.querySelector('section[data-chapter="1-compare"]'), shown: false },
+  { el: document.getElementById("popupFact1"), section: document.querySelector('section[data-chapter="2"]'), shown: false },
+  { el: document.getElementById("popupFact2"), section: document.querySelector('section[data-chapter="4"]'), shown: false },
+  { el: document.getElementById("popupConclusion"), section: document.querySelector('section[data-chapter="conclusion"]'), shown: false },
+];
+
 // Detect scroll into specific sections
 window.addEventListener("scroll", () => {
-  const chapter1 = document.querySelector(`section[data-chapter="1"]`);
-  const chapter1Compare = document.querySelector(`section[data-chapter="1-compare"]`);
-  const chapter2 = document.querySelector(`section[data-chapter="2"]`);
-  const chapter4 = document.querySelector(`section[data-chapter="4"]`);
-  const conclusion = document.querySelector(`section[data-chapter="conclusion"]`);
-
-  const rect1 = chapter1.getBoundingClientRect();
-  const rect1c = chapter1Compare.getBoundingClientRect();
-  const rect2 = chapter2.getBoundingClientRect();
-  const rect4 = chapter4.getBoundingClientRect();
-  const rect5 = conclusion.getBoundingClientRect();
-  
-  // Define a visibility threshold (e.g., 20% of the viewport height)
-  const threshold = window.innerHeight * 0.2;
-  const isChapter1Visible = rect1.top < window.innerHeight - threshold && rect1.bottom > threshold;
-  const isChapter1CompareVisible = rect1c.top < window.innerHeight - threshold && rect1c.bottom > threshold;
-  const isChapter2Visible = rect2.top < window.innerHeight - threshold && rect2.bottom > threshold;
-  const isChapter4Visible = rect4.top < window.innerHeight - threshold && rect4.bottom > threshold;
-  const isConclusionVisible = rect5.top < window.innerHeight - threshold && rect5.bottom > threshold;
-
-  // ---------------- CHAPTER 1 → Show map popup ----------------
-  if (!shownMapPopup && isChapter1Visible) {
-    showPopup(popupMap);
-    shownMapPopup = true;
-  }
-  if (popupMap.classList.contains("show") && !isChapter1Visible) {
-    hidePopup(popupMap);
-  }
-
-  // ---------------- CHAPTER 1 COMPARE → Show bar popup ----------------
-  if (!shownBarPopup && isChapter1CompareVisible) {
-    showPopup(popupBar);
-    shownBarPopup = true;
-  }
-  if (popupBar.classList.contains("show") && !isChapter1CompareVisible) {
-    hidePopup(popupBar);
-  }
-
-  // ---------------- CHAPTER 2 → Show Fun Fact 2 popup ----------------
-  if (!shownFact1Popup && isChapter2Visible) {
-    showPopup(popupFact1);
-    shownFact1Popup = true;
-  }
-  if (popupFact1.classList.contains("show") && !isChapter2Visible) {
-    hidePopup(popupFact1);
-  }
-  
-  // ---------------- CHAPTER 4 → Show Fun Fact 4 popup ----------------
-  if (!shownFact2Popup && isChapter4Visible) {
-    showPopup(popupFact2);
-    shownFact2Popup = true;
-  }
-  if (popupFact2.classList.contains("show") && !isChapter4Visible) {
-    hidePopup(popupFact2);
-  }
-
-// ---------------- Conclusion → Reminder to use slider ----------------
-if (!shownConclusion && isConclusionVisible) {
-    showPopup(popupConclusion);
-    shownConclusion = true;
-  }
-  if (popupConclusion.classList.contains("show") && !isConclusionVisible) {
-    hidePopup(popupConclusion);
-  }
+  popups.forEach(p => {
+    const rect = p.section.getBoundingClientRect();
+    if (!p.shown && isMostlyVisible(rect, 0.8)) {
+      showPopup(p.el);
+      p.shown = true;
+    }
+    if (p.el.classList.contains("show") && !isMostlyVisible(rect, 0.8)) {
+      hidePopup(p.el);
+    }
+  });
 });
+
 
 //=================== BAR GRAPHS =====================
 createBarChart({
