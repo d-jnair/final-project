@@ -738,27 +738,19 @@ if (scrolly) {
         activeMonth = 1;
         break;
       case "2":
+      case "2-compare":
+      case "2-congo":
         activeMonth = 6;
         break;
-      case "2-compare":
-        activeMonth = 7;
-        break;
-      case "2-congo":
-        activeMonth = 8;
-        break;
       case "3":
-        activeMonth = 9;
-        break;
       case "3-southafrica":
-        activeMonth = 10;
+        activeMonth = 9;
         break;
       case "4":
         activeMonth = 11;
         break;
       case "conclusion":
-        activeMonth = 12;
-        break;
-      default:
+        activeMonth = 1;
         break;
     }
 
